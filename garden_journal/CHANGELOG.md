@@ -32,3 +32,11 @@
 - Toten Datenbankverbindung-Button samt Modal aus der Web-UI entfernt (Relikt des
   entfernten Postgres-Setup-Wizards, haette bei Klick nur einen Fehler geworfen)
 - Lokal erneut vollstaendig getestet (Build + Container-Start + HTML-Laden + API-Call)
+
+## 0.2.4
+
+- Fix: API-Aufrufe der App nutzten absolute Pfade (`/garten/api/...`), die unter Ingress
+  den Praefix-Token ignorierten und ins Leere liefen ("Beet anlegen" etc. schlugen fehl,
+  obwohl direkte API-Aufrufe funktionierten). Auf relative Pfade umgestellt.
+- Fix: showToast() nutzte textContent statt innerHTML, HTML-Entities (z.B. &#10060;) wurden
+  dadurch woertlich statt als Symbol angezeigt

@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Gartentagebuch">
-<link rel="apple-touch-icon" href="/garten/icons/icon-192.png">
+<link rel="apple-touch-icon" href="garten/icons/icon-192.png">
 <title>🌱 Mein Gartentagebuch</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
   <style>
@@ -565,9 +565,9 @@ function todayStr(){return new Date().toISOString().split('T')[0]}
 function fmtDate(d){if(!d)return'–';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`}
 function fmtEuro(v){if(v===null||v===undefined||v==='')return'–';return parseFloat(v).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
+function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.innerHTML=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
 function showError(id,show){document.getElementById(id).classList.toggle('show',show)}
-async function api(method,path,body,absolute){const res=await fetch(absolute?path:'/garten/api'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!res.ok)throw new Error(res.statusText);const txt=await res.text();if(!txt||!txt.trim())return {};try{return JSON.parse(txt);}catch(e){console.error('JSON parse error:',txt.substring(0,100));throw e;}}
+async function api(method,path,body,absolute){const res=await fetch(absolute?path:'garten/api'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!res.ok)throw new Error(res.statusText);const txt=await res.text();if(!txt||!txt.trim())return {};try{return JSON.parse(txt);}catch(e){console.error('JSON parse error:',txt.substring(0,100));throw e;}}
 function buildEmojiRow(rowId,getCurrent,onSelect){const row=document.getElementById(rowId);if(!row)return;row.innerHTML='';EMOJIS.forEach(e=>{const btn=document.createElement('button');btn.className='emoji-btn'+(e===getCurrent()?' selected':'');btn.textContent=e;btn.onclick=()=>{onSelect(e);row.querySelectorAll('.emoji-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected')};row.appendChild(btn)})}
 buildEmojiRow('emoji-row',()=>selectedEmoji,e=>{selectedEmoji=e});
 buildEmojiRow('plan-emoji-row',()=>selectedPlanEmoji,e=>{selectedPlanEmoji=e});
