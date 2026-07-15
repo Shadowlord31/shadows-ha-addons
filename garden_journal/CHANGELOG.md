@@ -20,3 +20,9 @@
 - Fix: Docker-Build schlug fehl (apk-Paketkonflikt bei musl/musl-dev in ghcr.io/hassio-addons/base)
 - Basis-Image auf node:20-alpine umgestellt, s6-overlay-Service-Skript entfernt (init: false nutzt das Dockerfile-CMD direkt ohne Supervisor-Init-Wrapper)
 - Lokal erfolgreich gebaut und funktional getestet (Container-Start + API-Call)
+
+## 0.2.2
+
+- Fix: build.yaml wird von dieser Supervisor-Version komplett ignoriert (deprecated) -
+  Supervisor nutzte dadurch sein eigenes Default-Basis-Image ohne npm statt node:20-alpine
+- build.yaml entfernt, Basis-Image jetzt als Default direkt im Dockerfile (ARG BUILD_FROM=node:20-alpine)

@@ -1,4 +1,4 @@
-ARG BUILD_FROM
+ARG BUILD_FROM=node:20-alpine
 FROM ${BUILD_FROM}
 
 # Build-Tools fuer better-sqlite3 (natives Modul)
