@@ -1,4 +1,4 @@
 build_from:
-  amd64: "ghcr.io/hassio-addons/base:15.0.7"
-  aarch64: "ghcr.io/hassio-addons/base:15.0.7"
-  armv7: "ghcr.io/hassio-addons/base:15.0.7"
+  amd64: "node:20-alpine"
+  aarch64: "node:20-alpine"
+  armv7: "node:20-alpine"

@@ -14,3 +14,9 @@
 - Fruchtfolge-Pruefung von Postgres-Funktion nach JavaScript portiert
 - Noch nicht funktional als Add-on: Ingress ist in config.yaml aktiviert, aber die begleitenden
   Lovelace-Karten sprechen noch eine feste api_base an statt der Ingress-URL (naechster Schritt)
+
+## 0.2.1
+
+- Fix: Docker-Build schlug fehl (apk-Paketkonflikt bei musl/musl-dev in ghcr.io/hassio-addons/base)
+- Basis-Image auf node:20-alpine umgestellt, s6-overlay-Service-Skript entfernt (init: false nutzt das Dockerfile-CMD direkt ohne Supervisor-Init-Wrapper)
+- Lokal erfolgreich gebaut und funktional getestet (Container-Start + API-Call)
