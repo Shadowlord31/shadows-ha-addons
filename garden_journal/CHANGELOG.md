@@ -26,3 +26,9 @@
 - Fix: build.yaml wird von dieser Supervisor-Version komplett ignoriert (deprecated) -
   Supervisor nutzte dadurch sein eigenes Default-Basis-Image ohne npm statt node:20-alpine
 - build.yaml entfernt, Basis-Image jetzt als Default direkt im Dockerfile (ARG BUILD_FROM=node:20-alpine)
+
+## 0.2.3
+
+- Toten Datenbankverbindung-Button samt Modal aus der Web-UI entfernt (Relikt des
+  entfernten Postgres-Setup-Wizards, haette bei Klick nur einen Fehler geworfen)
+- Lokal erneut vollstaendig getestet (Build + Container-Start + HTML-Laden + API-Call)
