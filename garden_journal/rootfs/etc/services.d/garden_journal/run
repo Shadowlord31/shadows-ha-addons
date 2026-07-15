@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv bashio
+bashio::log.info "Starting Garden Journal..."
+cd /app
+exec node server.js
