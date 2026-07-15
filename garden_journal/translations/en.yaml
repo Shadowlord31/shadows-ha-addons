@@ -1,0 +1,5 @@
+configuration:
+  version:
+    name: Version
+name: Garden Journal
+description: Self-hosted garden journal - track beds, plantings, harvests, perennials, planning and costs

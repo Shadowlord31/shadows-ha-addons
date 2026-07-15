@@ -1,0 +1,15 @@
+name: "Garden Journal"
+description: "Self-hosted garden journal - track beds, plantings, harvests, perennials, planning and costs"
+version: "0.1.0"
+slug: "garden_journal"
+init: false
+arch:
+  - amd64
+  - aarch64
+  - armv7
+ingress: true
+ingress_port: 3002
+panel_icon: mdi:sprout
+webui: "http://[HOST]:[PORT:3002]/"
+options: {}
+schema: {}

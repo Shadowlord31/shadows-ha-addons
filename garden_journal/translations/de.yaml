@@ -1,0 +1,5 @@
+configuration:
+  version:
+    name: Version
+name: Garden Journal
+description: Selbst gehostetes Gartentagebuch - Beete, Pflanzungen, Ernten, Gehoelze, Planung und Kosten
