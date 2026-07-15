@@ -40,3 +40,13 @@
   obwohl direkte API-Aufrufe funktionierten). Auf relative Pfade umgestellt.
 - Fix: showToast() nutzte textContent statt innerHTML, HTML-Entities (z.B. &#10060;) wurden
   dadurch woertlich statt als Symbol angezeigt
+
+## 0.2.5
+
+- Temporaerer Migrations-Endpunkt: POST /garten/api/admin/migrate/postgres
+  (liest einmalig aus einer bestehenden Postgres-Gartentagebuch-Instanz, leert vorher
+  die lokale SQLite-DB, schreibt alle Tabellen 1:1 mit identischen IDs neu)
+- Lokal erfolgreich gegen echte Produktivdaten getestet (23 Beete, 26 Pflanzen,
+  36 Eintraege, 7 Gehoelze, 156 Kosten-Eintraege - alle Werte nach Migration verifiziert)
+- Wird nach erfolgreicher Migration auf den Zielsystemen wieder entfernt (nur fuer den
+  einmaligen Umzug gedacht, kein Dauerfeature)
