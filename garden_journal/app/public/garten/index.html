@@ -231,7 +231,21 @@
     .rot-pill-ok{background:#e8f5d8;color:#1a5c0a}
     .rot-pill-warning{background:#fdf3cd;color:#7a5500}
     .rot-pill-blocked{background:#fdecea;color:#8b1a1a}
-    .chip-permanent{background:linear-gradient(135deg,#e8f5d8,#d4edda)!important;border:2px solid #5a9a3a!important;}.perm-badge{background:#5a9a3a;color:#fff;border-radius:10px;padding:1px 7px;font-size:.67rem;font-weight:700}.bed-root-card{}.bed-children-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding:10px 0 4px;}.bed-child-card{background:var(--cream);border-radius:11px;border:1.5px solid var(--cream-dark);padding:10px 12px;}.bed-child-header{font-size:.82rem;font-weight:700;color:var(--green-deep);padding:0 0 7px;border-bottom:1.5px solid var(--cream-dark);margin-bottom:8px;}.bed-grandchild-section{margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--cream-dark);}.bed-grandchild-section:last-child{border-bottom:none;margin-bottom:0;}.bed-grandchild-label{font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;padding:2px 0 5px;}.bed-no-plans{text-align:center;color:var(--text-muted);font-size:.83rem;padding:10px;opacity:.7;width:100%}
+    .chip-permanent{background:linear-gradient(135deg,#e8f5d8,#d4edda)!important;border:2px solid #5a9a3a!important;}.plant-tab-card{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;padding:12px 14px;cursor:pointer;transition:.15s}
+.plant-tab-card:hover{border-color:#4a7c2f;transform:translateY(-1px)}
+.pt-badge{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.pt-badge-planned{background:#e8f5d8;color:var(--green-deep)}
+.pt-badge-planted{background:var(--green-pale);color:var(--green-deep)}
+.pt-badge-harvest{background:var(--harvest-pale);color:#7a4800}
+.pt-badge-final{background:#27ae60;color:#fff}
+.pt-badge-permanent{background:#5a9a3a;color:#fff}
+.pd-section{margin-bottom:16px}
+.pd-section-title{font-size:.82rem;font-weight:700;color:var(--green-deep);padding:4px 0;border-bottom:2px solid var(--cream-dark);margin-bottom:6px}
+.pd-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--cream-dark)}
+.pd-row:last-child{border-bottom:none}
+.pd-row-main{font-size:.88rem}
+.pd-row-actions{display:flex;gap:6px;flex-shrink:0}
+.perm-badge{background:#5a9a3a;color:#fff;border-radius:10px;padding:1px 7px;font-size:.67rem;font-weight:700}.bed-root-card{}.bed-children-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding:10px 0 4px;}.bed-child-card{background:var(--cream);border-radius:11px;border:1.5px solid var(--cream-dark);padding:10px 12px;}.bed-child-header{font-size:.82rem;font-weight:700;color:var(--green-deep);padding:0 0 7px;border-bottom:1.5px solid var(--cream-dark);margin-bottom:8px;}.bed-grandchild-section{margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--cream-dark);}.bed-grandchild-section:last-child{border-bottom:none;margin-bottom:0;}.bed-grandchild-label{font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;padding:2px 0 5px;}.bed-no-plans{text-align:center;color:var(--text-muted);font-size:.83rem;padding:10px;opacity:.7;width:100%}
     .bed-view-section{margin-top:24px}
     .bed-view-section-title{font-family:Playfair Display,serif;font-size:1.05rem;color:var(--text-muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--cream-dark)}
     @media(max-width:700px){.bed-view-grid{grid-template-columns:1fr}.bed-tree{grid-template-columns:1fr!important}}@media(max-width:960px) and (min-width:701px){.bed-tree{grid-template-columns:repeat(2,1fr)!important}}@media(max-width:960px) and (min-width:701px){.bed-view-grid{grid-template-columns:repeat(2,1fr)}}
@@ -296,9 +310,7 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
         <div style="display:flex;gap:6px;background:var(--cream);border-radius:10px;padding:4px">
-          <button class="tj-tab active" id="tj-tab-plant" onclick="switchTjTab('plant')">&#127809; Gepflanzt</button>
-          <button class="tj-tab" id="tj-tab-harvest" onclick="switchTjTab('harvest')">&#127806; Geerntet</button>
-          <button class="tj-tab" id="tj-tab-perm" onclick="switchTjTab('perm')">&#127795; Dauerhaft</button>
+          <button class="tj-tab active" id="tj-tab-plants" onclick="switchTjTab('plants')">&#127793; Pflanzen</button>
           <button class="tj-tab" id="tj-tab-gehoelze" onclick="switchTjTab('gehoelze')">&#127795; Geh&#246;lze</button>
           <button class="tj-tab" id="tj-tab-planung" onclick="switchTjTab('planung')">&#128197; Planung</button>
         </div>
@@ -491,6 +503,19 @@
       <input type="hidden" id="input-location" value=""/>
       <input type="hidden" id="input-desc" value=""/>
     </div></div>
+<div id="plant-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px"><div style="background:var(--white);border-radius:16px;padding:26px 22px;max-width:520px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div id="plant-detail-title" style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--green-deep)"></div><button onclick="closePlantDetail()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#888;line-height:1">&#215;</button></div>
+  <div id="plant-detail-body"></div>
+  <div style="margin-top:16px;text-align:right"><button onclick="closePlantDetail()" style="background:none;border:1.5px solid var(--cream-dark);border-radius:10px;padding:9px 18px;font-family:'Lato',sans-serif;font-weight:700;cursor:pointer;color:var(--text-muted)">Schlie&#223;en</button></div>
+</div></div>
+<div id="date-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100;align-items:center;justify-content:center;padding:16px"><div style="background:var(--white);border-radius:16px;padding:24px 20px;max-width:340px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+  <div style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--green-deep);margin-bottom:14px">&#128197; Datum \u00e4ndern</div>
+  <input type="date" id="date-edit-input" style="width:100%;box-sizing:border-box"/>
+  <div style="display:flex;gap:10px;margin-top:16px">
+    <button onclick="closeEntryDateEdit()" style="flex:1;padding:10px;border:1.5px solid var(--cream-dark);border-radius:10px;background:none;cursor:pointer;font-family:inherit">Abbrechen</button>
+    <button class="btn-primary" onclick="saveEntryDateEdit()" style="flex:1">Speichern</button>
+  </div>
+</div></div>
 <div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--white);border-radius:16px;padding:28px 24px;max-width:560px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
     <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--green-deep);margin-bottom:20px">✏️ Eintrag bearbeiten</div>
@@ -647,13 +672,16 @@ function renderKostenKategorienVerwaltung(){
 }
 
 function refreshCostYearFilter(){const sel=document.getElementById('cost-filter-year');const val=sel.value;const years=[...new Set(costs.map(c=>c.date.split('-')[0]))].sort().reverse();sel.innerHTML='<option value="">Alle Jahre</option>';years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o)});sel.value=val}
-function refreshEntryYearFilter(){const sel=document.getElementById('filter-year');if(!sel){refreshTjFilters();return;}const val=sel.value;const years=[...new Set(entries.map(e=>e.date.split('-')[0]))].sort().reverse();sel.innerHTML='<option value="">Alle Jahre</option>';years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o)});sel.value=val}var tjActiveTab='plant';
+function refreshEntryYearFilter(){const sel=document.getElementById('filter-year');if(!sel){refreshTjFilters();return;}const val=sel.value;const years=[...new Set(entries.map(e=>e.date.split('-')[0]))].sort().reverse();sel.innerHTML='<option value="">Alle Jahre</option>';years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o)});sel.value=val}var tjActiveTab='plants';
 function switchTjTab(t){
   tjActiveTab=t;
-  ['plant','harvest','perm','gehoelze','planung'].forEach(x=>{var b=document.getElementById('tj-tab-'+x);if(b)b.classList.toggle('active',x===t);});
+  ['plants','gehoelze','planung'].forEach(x=>{var b=document.getElementById('tj-tab-'+x);if(b)b.classList.toggle('active',x===t);});
   // Filter-Bereich ausblenden bei Gehölzen
   var filters=document.getElementById('tj-filters');
   if(filters)filters.style.display=(t==='gehoelze')?'none':'';
+  // Jahresfilter ergibt bei "Pflanzen" keinen Sinn - immer aktuelles Jahr
+  var yf=document.getElementById('tj-filter-year');
+  if(yf)yf.style.display=(t==='plants')?'none':'';
   if(t==='gehoelze')renderGehoelze();else renderAllTabs();
 }
 function refreshTjFilters(){
@@ -766,72 +794,131 @@ function renderAllTabs(){
     });
     cont.innerHTML=planHtml;return;
   }
-  var cat=tjActiveTab==="plant"?"plant":"harvest";
-  var filtered=entries.filter(e=>e.cat===cat&&matchQ(e)&&(!bedId||String(e.bed_id)===bedId)&&(!year||e.date.startsWith(year))).sort((a,b)=>b.date.localeCompare(a.date));
-  if(countEl)countEl.textContent=filtered.length+(filtered.length===1?" Eintrag":" Einträge");
-  var emptyIcon=cat==="plant"?"🌱":"🌾";
-  if(!filtered.length){cont.innerHTML="<div class='empty-state'><span class='big-icon'>"+emptyIcon+"</span><h3>Keine Einträge</h3></div>";return;}
-  var isH=cat==="harvest";
-  var cards=filtered.map(function(e){
-    var beet=e.bed_id?esc(getBedPath(e.bed_id)):"";
-    var kat=e.plant_cat?(PLANT_CAT_ICONS[e.plant_cat]||"")+" "+esc(e.plant_cat):"";
-    var menge=isH&&e.harvest_amount?"<div style='margin-bottom:8px'><span style='background:var(--harvest-pale);color:#7a4800;border-radius:6px;padding:2px 10px;font-size:.82rem'>&#9878; "+e.harvest_amount+" "+(e.harvest_unit||"")+"</span></div>":"";
-    var btns="<div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:10px'>"
-      +(!isH?"<button class='btn-edit' onclick='openHarvestModal(\""+e.id+"\")' style='flex:1;min-width:80px'>&#127806; Ernte</button>":"")
-      +"<button class='btn-edit' onclick='window.editEntry("+e.id+")' style='flex:1;min-width:60px'>&#9998;</button>"
-      +"<button class='btn-delete' onclick='window.deleteEntry("+e.id+")' style='flex:1;min-width:60px'>&#128465;</button>"
-      +"</div>";
-    return "<div style='background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;padding:12px 14px;margin-bottom:8px'>"
-      +"<div style='display:flex;align-items:center;gap:10px;margin-bottom:6px'>"
-      +"<span style='font-size:1.6rem'>"+e.emoji+"</span>"
-      +"<div style='flex:1'>"
-      +"<div style='font-weight:700;color:var(--green-deep)'>"+esc(e.plant)+"</div>"
-      +"<div style='font-size:.8rem;color:var(--text-muted)'>"+fmtDate(e.date)+(beet?" &middot; "+beet:"")+"</div>"
-      +"</div>"
-      +(kat?"<span style='background:#2980b9;color:#fff;border-radius:6px;padding:2px 8px;font-size:.75rem'>"+kat+"</span>":"")
-      +"</div>"
-      +menge
-      +btns
-      +"</div>";
-  });
-  // Gruppierung nach Haupt-Beet (root parent)
-  if(!bedId && filtered.length > 0) {
-    var groups = {};
-    var groupOrder = [];
-    filtered.forEach(function(e) {
-      // Finde das Root-Beet (level=1 oder kein parent)
-      var rootName = 'Kein Beet';
-      if(e.bed_id) {
-        var bed = beds.find(function(b){return b.id==e.bed_id;});
-        if(bed) {
-          if(!bed.parent_id) {
-            rootName = bed.name;
-          } else {
-            var parent = beds.find(function(b){return b.id==bed.parent_id;});
-            if(parent && !parent.parent_id) {
-              rootName = parent.name;
-            } else if(parent) {
-              var grandparent = beds.find(function(b){return b.id==parent.parent_id;});
-              rootName = grandparent ? grandparent.name : parent.name;
-            }
-          }
-        }
-      }
-      if(!groups[rootName]) { groups[rootName] = []; groupOrder.push(rootName); }
-      groups[rootName].push(filtered.indexOf(e));
-    });
-    var groupedHtml = '';
-    groupOrder.forEach(function(key) {
-      var groupCards = groups[key].map(function(i){ return cards[i]; }).join('');
-      groupedHtml += '<div style="margin-bottom:20px">'
-        + '<div style="font-size:.82rem;font-weight:700;color:var(--green-deep);padding:6px 4px 4px;border-bottom:2px solid var(--cream-dark);margin-bottom:4px">&#127804; '+esc(key)+'</div>'
-        + '<div class="ub-grid">'+groupCards+'</div>'
-        + '</div>';
-    });
-    cont.innerHTML = groupedHtml;
-  } else {
-    cont.innerHTML = '<div class="ub-grid">'+cards.join('')+'</div>';
+  if(tjActiveTab==="plants"){renderPlantsTabInner(q,bedId,cont,countEl);return;}
+}
+
+function getPlantGroups(q,bedId){
+  var year=new Date().getFullYear();
+  var groups={},order=[];
+  function keyFor(o){return o.plant_id?'id_'+o.plant_id:'name_'+(o.plant||'').toLowerCase();}
+  function ensure(o){
+    var k=keyFor(o);
+    if(!groups[k]){groups[k]={key:k,plant_id:o.plant_id||null,name:o.plant,emoji:o.emoji,family_name:o.family_name||null,family_color:o.family_color||null,planted:[],harvests:[],permanent:[],planned:[]};order.push(k);}
+    return groups[k];
   }
+  entries.forEach(function(e){
+    if(!e.date||new Date(e.date).getFullYear()!==year)return;
+    if(bedId&&String(e.bed_id)!==bedId)return;
+    if(e.cat==='plant'){ensure(e).planted.push(e);}
+    else if(e.cat==='harvest'){ensure(e).harvests.push(e);}
+  });
+  plans.forEach(function(p){
+    if(bedId&&String(p.bed_id)!==bedId)return;
+    if(p.is_permanent){
+      if(p.year<=year&&(p.removed_year==null||p.removed_year>year))ensure(p).permanent.push(p);
+    }else if(p.year===year&&!p.done){
+      ensure(p).planned.push(p);
+    }
+  });
+  if(q)order=order.filter(function(k){return groups[k].name.toLowerCase().includes(q);});
+  return{groups:groups,order:order};
+}
+
+function renderPlantsTabInner(q,bedId,cont,countEl){
+  var res=getPlantGroups(q,bedId);
+  var order=res.order,groups=res.groups;
+  if(countEl)countEl.textContent=order.length+(order.length===1?' Pflanze':' Pflanzen');
+  if(!order.length){cont.innerHTML='<div class="empty-state"><span class="big-icon">&#127793;</span><h3>Keine Pflanzen '+new Date().getFullYear()+'</h3><p>Lege im Katalog eine Pflanze an und pflanze sie, um hier loszulegen.</p></div>';return;}
+  order.sort(function(a,b){return groups[a].name.localeCompare(groups[b].name);});
+  var cards=order.map(function(k){
+    var g=groups[k];
+    var badges=[];
+    if(g.planned.length)badges.push('<span class="pt-badge pt-badge-planned">&#128197; Geplant</span>');
+    if(g.planted.length)badges.push('<span class="pt-badge pt-badge-planted">&#127809; Gepflanzt</span>');
+    var teil=g.harvests.filter(function(h){return !h.harvest_final;}).length;
+    if(teil)badges.push('<span class="pt-badge pt-badge-harvest">&#127806; '+teil+'x Teilernte</span>');
+    if(g.harvests.some(function(h){return h.harvest_final;}))badges.push('<span class="pt-badge pt-badge-final">&#10004; Final geerntet</span>');
+    if(g.permanent.length)badges.push('<span class="pt-badge pt-badge-permanent">&#127794; Dauerhaft</span>');
+    var fam=g.family_name?'<span style="background:'+(g.family_color||'#95a5a6')+';color:#fff;border-radius:4px;padding:1px 7px;font-size:.72rem">'+esc(g.family_name)+'</span>':'';
+    return '<div class="plant-tab-card" onclick="openPlantDetail(\''+k.replace(/'/g,"\\'")+'\')">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      +'<span style="font-size:1.6rem">'+(g.emoji||'&#127793;')+'</span>'
+      +'<div style="flex:1"><div style="font-weight:700;color:var(--green-deep)">'+esc(g.name)+'</div></div>'
+      +fam+'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px">'+badges.join('')+'</div>'
+      +'</div>';
+  });
+  cont.innerHTML='<div class="ub-grid">'+cards.join('')+'</div>';
+}
+
+var _currentPlantDetailKey=null;
+function openPlantDetail(key){
+  var res=getPlantGroups('','');
+  var g=res.groups[key];
+  if(!g)return;
+  _currentPlantDetailKey=key;
+  var html='';
+  if(g.planned.length){
+    html+='<div class="pd-section"><div class="pd-section-title">&#128197; Geplant</div>'+g.planned.map(function(p){
+      return '<div class="pd-row"><div class="pd-row-main">'+(p.bed_id?esc(getBedPath(p.bed_id)):'Kein Beet')+(p.month?' &middot; '+p.month+'/'+p.year:'')+'</div>'
+        +'<div class="pd-row-actions"><button class="btn-edit" onclick="closePlantDetail();editPlan('+p.id+')">&#9998;</button>'
+        +'<button class="btn-delete" onclick="(async()=>{await deletePlan('+p.id+');refreshPlantDetailAfterChange()})()">&#128465;</button></div></div>';
+    }).join('')+'</div>';
+  }
+  if(g.permanent.length){
+    html+='<div class="pd-section"><div class="pd-section-title">&#127794; Dauerhaft</div>'+g.permanent.map(function(p){
+      return '<div class="pd-row"><div class="pd-row-main">'+(p.bed_id?esc(getBedPath(p.bed_id)):'Kein Beet')+' &middot; seit '+p.year+'</div>'
+        +'<div class="pd-row-actions"><button class="btn-edit" title="Ernte erfassen" onclick="closePlantDetail();openHarvestModal(\'perm_'+p.id+'\')">&#127806;</button>'
+        +'<button class="btn-edit" title="Roden" onclick="(async()=>{await rodenPlan('+p.id+');refreshPlantDetailAfterChange()})()">&#128308;</button></div></div>';
+    }).join('')+'</div>';
+  }
+  if(g.planted.length){
+    html+='<div class="pd-section"><div class="pd-section-title">&#127809; Pflanzungen</div>'+g.planted.map(function(e){
+      return '<div class="pd-row"><div class="pd-row-main">'+fmtDate(e.date)+(e.bed_id?' &middot; '+esc(getBedPath(e.bed_id)):'')+'</div>'
+        +'<div class="pd-row-actions"><button class="btn-edit" title="Datum \u00e4ndern" onclick="openEntryDateEdit('+e.id+')">&#9998;</button>'
+        +'<button class="btn-delete" onclick="(async()=>{await deleteEntry('+e.id+');refreshPlantDetailAfterChange()})()">&#128465;</button></div></div>';
+    }).join('')+'</div>';
+  }
+  if(g.harvests.length){
+    html+='<div class="pd-section"><div class="pd-section-title">&#127806; Ernten</div>'+g.harvests.map(function(e){
+      var menge=e.harvest_amount?(e.harvest_amount+' '+(e.harvest_unit||'')):'';
+      var fin=e.harvest_final?'<span class="pt-badge pt-badge-final">&#10004; Final</span>':'<span class="pt-badge pt-badge-harvest">Teilernte</span>';
+      return '<div class="pd-row"><div class="pd-row-main">'+fmtDate(e.date)+(menge?' &middot; '+menge:'')+' '+fin+'</div>'
+        +'<div class="pd-row-actions"><button class="btn-edit" title="Datum \u00e4ndern" onclick="openEntryDateEdit('+e.id+')">&#9998;</button>'
+        +'<button class="btn-delete" onclick="(async()=>{await deleteEntry('+e.id+');refreshPlantDetailAfterChange()})()">&#128465;</button></div></div>';
+    }).join('')+'</div>';
+  }
+  document.getElementById('plant-detail-title').innerHTML=(g.emoji||'&#127793;')+' '+esc(g.name);
+  document.getElementById('plant-detail-body').innerHTML=html||'<div class="empty-state"><p>Keine Daten</p></div>';
+  document.getElementById('plant-detail-modal').style.display='flex';
+}
+function closePlantDetail(){document.getElementById('plant-detail-modal').style.display='none';}
+function refreshPlantDetailAfterChange(){
+  renderAllTabs();
+  if(_currentPlantDetailKey)openPlantDetail(_currentPlantDetailKey);
+}
+
+function openEntryDateEdit(id){
+  var e=entries.find(function(x){return x.id===id;});
+  if(!e)return;
+  window._dateEditEntryId=id;
+  document.getElementById('date-edit-input').value=e.date;
+  document.getElementById('date-edit-modal').style.display='flex';
+}
+function closeEntryDateEdit(){document.getElementById('date-edit-modal').style.display='none';}
+async function saveEntryDateEdit(){
+  var id=window._dateEditEntryId;
+  var e=entries.find(function(x){return x.id===id;});
+  if(!e)return;
+  var newDate=document.getElementById('date-edit-input').value;
+  if(!newDate)return;
+  try{
+    await api('PATCH','/entries/'+id,{emoji:e.emoji,plant:e.plant,date:newDate,location:e.location,description:e.description,cat:e.cat,bed_id:e.bed_id,plant_cat:e.plant_cat,plant_family_id:e.plant_family_id,harvest_amount:e.harvest_amount,harvest_unit:e.harvest_unit,plant_id:e.plant_id});
+    e.date=newDate;
+    closeEntryDateEdit();
+    showToast('&#128197; Datum ge\u00e4ndert');
+    refreshPlantDetailAfterChange();
+  }catch(err){showToast('&#10060; Fehler');}
 }
 
 async function loadAll(){try{[entries,plans,beds,costs,plantFamilies,kostenkategorien,plantCatalog,plantCategories,perennials]=await Promise.all([api('GET','/entries'),api('GET','/plans?year='+planYear),api('GET','/beds'),api('GET','/costs'),api('GET','/plant-families'),api('GET','/costs/kategorien'),api('GET','/plants'),api('GET','/plant-categories'),api('GET','/perennials')]);updateCatMaps();
@@ -1369,7 +1456,7 @@ async function savePermEdit(){const p=plans.find(x=>String(x.id)===editingPermId
 
 // Klick außerhalb schließt Modal
 document.addEventListener('DOMContentLoaded',function(){
-  var pairs=[['entry-modal',closeEntryModal],['plan-modal',closePlanModal],['bed-add-modal',closeBedAddModal],['edit-modal',closeEditModal],['harvest-modal',closeHarvestModal],['bed-edit-modal',closeBedEditModal],['plant-edit-modal',closePlantEditModal],['pf-modal',closePfModal]];
+  var pairs=[['entry-modal',closeEntryModal],['plan-modal',closePlanModal],['bed-add-modal',closeBedAddModal],['edit-modal',closeEditModal],['harvest-modal',closeHarvestModal],['bed-edit-modal',closeBedEditModal],['plant-edit-modal',closePlantEditModal],['pf-modal',closePfModal],['plant-detail-modal',closePlantDetail],['date-edit-modal',closeEntryDateEdit]];
   pairs.forEach(function(p){var el=document.getElementById(p[0]);if(el)el.addEventListener('click',function(e){if(e.target===this)p[1]();});});
 });
 async function deleteEntry(id){try{await api('DELETE','/entries/'+id);entries=entries.filter(e=>e.id!==id);refreshEntryYearFilter();refreshGartenplan();showToast('🗑️ Gelöscht')}catch(e){showToast('❌ Fehler')}}

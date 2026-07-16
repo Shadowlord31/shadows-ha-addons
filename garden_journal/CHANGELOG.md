@@ -50,3 +50,14 @@
   36 Eintraege, 7 Gehoelze, 156 Kosten-Eintraege - alle Werte nach Migration verifiziert)
 - Wird nach erfolgreicher Migration auf den Zielsystemen wieder entfernt (nur fuer den
   einmaligen Umzug gedacht, kein Dauerfeature)
+
+## 0.3.0
+
+- Tagebuch umgebaut: Tabs "Gepflanzt/Geerntet/Dauerhaft" durch einen einzigen Tab
+  "Pflanzen" ersetzt - jede Pflanze taucht nur noch einmal pro Jahr auf (gruppiert
+  nach plant_id), mit Status-Badges (Geplant/Gepflanzt/Nx Teilernte/Final geerntet/Dauerhaft)
+- Tippen auf eine Pflanze oeffnet Detailansicht mit der kompletten Jahres-Historie
+  (alle Pflanzungen, alle Ernten mit Menge) - Datum pro Ereignis nachtraeglich
+  aenderbar, einzelne Ereignisse loeschbar
+- Lokal gegen echte migrierte Produktivdaten getestet (18 Pflanzengruppen korrekt
+  gebildet, u.a. mehrfach gepflanzte und final geerntete Pflanzen richtig erkannt)
