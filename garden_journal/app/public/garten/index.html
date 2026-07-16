@@ -536,7 +536,7 @@
     <div class="form-grid">
       <div><label>Datum</label><input type="date" id="harvest-date"/></div>
       <div><label>Menge (optional)</label><input type="number" id="harvest-amount" placeholder="z.B. 1.5" step="0.001" min="0"/></div>
-      <div><label>Einheit</label><select id="harvest-unit"><option value="kg">kg</option><option value="g">g</option><option value="Stück">Stück</option></select></div>
+      <div><label>Einheit</label><select id="harvest-unit" onchange="adjustHarvestAmountStep()"><option value="kg">kg</option><option value="g">g</option><option value="Stück">Stück</option></select></div>
       <div class="form-full"><label>Notiz (optional)</label><input type="text" id="harvest-note" placeholder="z.B. erste Ernte, sehr süß…"/></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
@@ -752,6 +752,18 @@ function renderAllTabs(){
   if(tjActiveTab==="plants"){renderPlantsTabInner(q,bedId,cont,countEl);return;}
 }
 
+function adjustHarvestAmountStep(){
+  var unitSel=document.getElementById('harvest-unit');
+  var amountInput=document.getElementById('harvest-amount');
+  if(!unitSel||!amountInput)return;
+  if(unitSel.value==='St\u00fcck'){
+    amountInput.step='1';
+    if(amountInput.value)amountInput.value=Math.round(parseFloat(amountInput.value));
+  }else{
+    amountInput.step='0.001';
+  }
+}
+
 function harvestTotalsLabel(harvests){
   var kg=0,pieces=0,other={};
   harvests.forEach(function(h){
@@ -767,7 +779,7 @@ function harvestTotalsLabel(harvests){
     var val=(kg<1)?Math.round(kg*1000)+' g':(Math.round(kg*100)/100)+' kg';
     parts.push(val);
   }
-  if(pieces>0)parts.push((Math.round(pieces*100)/100)+' St\u00fcck');
+  if(pieces>0)parts.push(Math.round(pieces)+' St\u00fcck');
   Object.keys(other).forEach(function(u){parts.push((Math.round(other[u]*100)/100)+' '+u);});
   return parts.join(' + ');
 }

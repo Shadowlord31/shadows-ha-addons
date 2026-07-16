@@ -115,3 +115,10 @@
   Gesamtsumme (g/kg werden korrekt zusammengerechnet und in die sinnvollere
   Einheit umgerechnet, z.B. 500g + 1,5kg = 2 kg). Stueck bleibt als eigene,
   nicht kompatible Einheit getrennt
+
+## 0.4.4
+
+- Fix: Mengenfeld im Ernte-Modal hatte fest step="0.001", auch bei Einheit "Stueck" -
+  dadurch waren Kommazahlen wie "3,001 Stueck" moeglich. Springt jetzt bei "Stueck"
+  auf ganze Zahlen (step=1) um, rundet einen evtl. schon eingegebenen Wert automatisch
+- Gesamtsumme in der Ernten-Detailansicht rundet Stueck jetzt ebenfalls auf ganze Zahlen
