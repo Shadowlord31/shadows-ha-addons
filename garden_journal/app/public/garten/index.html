@@ -1518,7 +1518,7 @@ async function saveHarvest(final){
   var harvest_amount=parseFloat(document.getElementById('harvest-amount').value)||null;
   var harvest_unit=harvest_amount?document.getElementById('harvest-unit').value:null;
   var note=document.getElementById('harvest-note').value.trim();
-  var entry={id:Date.now(),emoji:harvestSourceEntry.emoji,plant:harvestSourceEntry.plant,date:document.getElementById('harvest-date').value,location:'',description:note||(final?'Letzte Ernte':''),cat:'harvest',bed_id:harvestSourceEntry.bed_id||null,bed_name:harvestSourceEntry.bed_name||'',plant_cat:harvestSourceEntry.plant_cat||null,plant_family_id:harvestSourceEntry.plant_family_id||null,harvest_amount:harvest_amount,harvest_unit:harvest_unit,plant_id:harvestSourceEntry.plant_id||null,harvest_final:!!final};
+  var entry={id:Date.now(),emoji:harvestSourceEntry.emoji,plant:harvestSourceEntry.plant,date:document.getElementById('harvest-date').value,location:'',description:note||(final?'Letzte Ernte':''),cat:'harvest',bed_id:harvestSourceEntry.bed_id||null,bed_name:harvestSourceEntry.bed_name||'',plant_cat:harvestSourceEntry.plant_cat||null,plant_family_id:harvestSourceEntry.plant_family_id||null,harvest_amount:harvest_amount,harvest_unit:harvest_unit,plant_id:harvestSourceEntry.plant_id||null,harvest_final:!!final,perennial_id:harvestSourceEntry.perennial_id||null};
   try{
     await api('POST','/entries',entry);entries.unshift(entry);refreshEntryYearFilter();
     if(final){
@@ -2638,28 +2638,66 @@ function renderGehoelze(){
     var ageStr=(age+1)+'. Jahr';
     var isRemoved=!!p.removed_year;
     var emoji=p.plant_emoji||'&#127807;';
-    var cat=p.plant_cat?'<span style="background:#2980b9;color:#fff;border-radius:6px;padding:1px 8px;font-size:.75rem">'+esc(p.plant_cat)+'</span>':'';
-    var fam=p.family_name?'<span style="background:'+(p.family_color||'#95a5a6')+';color:#fff;border-radius:6px;padding:1px 8px;font-size:.75rem">'+esc(p.family_name)+'</span>':'';
-    var removed=isRemoved?'<span style="background:#e74c3c;color:#fff;border-radius:6px;padding:1px 8px;font-size:.75rem">Gerodet '+p.removed_year+'</span>':'';
-    var btns=isRemoved?'':'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
-      +'<button class="btn-edit" onclick="openHarvestModalPerennial('+p.id+')" style="flex:1;min-width:80px">&#127806; Ernte</button>'
-      +'<button class="btn-edit" onclick="openGehoelzModal('+p.id+')" style="flex:1;min-width:60px">&#9998;</button>'
-      +'<button class="btn-edit" onclick="rodenGehoelz('+p.id+')" style="flex:1;min-width:80px;background:#8e6b23;color:#fff">&#129683; Roden</button>'
-      +'<button class="btn-delete" onclick="deleteGehoelz('+p.id+')" style="flex:1;min-width:60px">&#128465;</button>'
-      +'</div>';
-    return '<div style="background:'+(isRemoved?'#f9f9f9':'var(--white)')
-      +';border:1.5px solid '+(isRemoved?'#ddd':'#5a9a3a44')
-      +';border-radius:12px;padding:12px 14px;margin-bottom:8px;opacity:'+(isRemoved?'.6':'1')+'">'
+    var harvestsThisYear=gehoelzHarvestsFor(p).filter(function(e){return new Date(e.date).getFullYear()===year;});
+    var teil=harvestsThisYear.filter(function(h){return !h.harvest_final;}).length;
+    var badges=[];
+    if(teil)badges.push('<span class="pt-badge pt-badge-harvest">&#127806; '+teil+'x Teilernte</span>');
+    if(harvestsThisYear.some(function(h){return h.harvest_final;}))badges.push('<span class="pt-badge pt-badge-final">&#10004; Final geerntet</span>');
+    if(isRemoved)badges.push('<span class="pt-badge" style="background:#e74c3c;color:#fff">Gerodet '+p.removed_year+'</span>');
+    return '<div class="plant-tab-card" style="opacity:'+(isRemoved?'.6':'1')+'" onclick="openGehoelzDetail('+p.id+')">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
       +'<span style="font-size:1.6rem">'+emoji+'</span>'
       +'<div style="flex:1"><div style="font-weight:700;color:var(--green-deep)">'+esc(p.name)+'</div>'
       +'<div style="font-size:.8rem;color:var(--text-muted)">seit '+p.planted_year+' &middot; '+ageStr+(p.location_note?' &middot; '+esc(p.location_note):'')+'</div>'
       +'</div></div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'+cat+fam+removed+'</div>'
-      +btns+'</div>';
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px">'+badges.join('')+'</div>'
+      +'</div>';
   });
-  var addBtn='<button class="btn-primary" onclick="openGehoelzModal(null)" style="width:100%;padding:12px;margin-bottom:16px">&#10133; Geh&#246;lz anlegen</button>';
   cont.innerHTML=addBtn+'<div class="ub-grid">'+cards.join('')+'</div>';
+}
+
+function gehoelzHarvestsFor(p){
+  return entries.filter(function(e){
+    if(e.cat!=='harvest')return false;
+    if(p.perennial_id_matches===undefined){}
+    return e.perennial_id===p.id||(!e.perennial_id&&p.plant_id&&e.plant_id===p.plant_id&&!e.bed_id);
+  });
+}
+
+var _currentGehoelzDetailId=null;
+function openGehoelzDetail(id){
+  var p=perennials.find(function(x){return x.id===id;});
+  if(!p)return;
+  _currentGehoelzDetailId=id;
+  var year=new Date().getFullYear();
+  var isRemoved=!!p.removed_year;
+  var harvests=gehoelzHarvestsFor(p).filter(function(e){return new Date(e.date).getFullYear()===year;}).sort(function(a,b){return b.date.localeCompare(a.date);});
+  var actions='<div class="pd-section"><div style="display:flex;gap:6px;flex-wrap:wrap">'
+    +(isRemoved?'':'<button class="btn-edit" onclick="closeGehoelzDetail();openHarvestModalPerennial('+p.id+')" style="flex:1;min-width:100px">&#127806; Ernte erfassen</button>')
+    +'<button class="btn-edit" onclick="closeGehoelzDetail();openGehoelzModal('+p.id+')" style="flex:1;min-width:80px">&#9998; Bearbeiten</button>'
+    +(isRemoved?'':'<button class="btn-edit" onclick="(async()=>{await rodenGehoelz('+p.id+');refreshGehoelzDetailAfterChange()})()" style="flex:1;min-width:80px;background:#8e6b23;color:#fff">&#129683; Roden</button>')
+    +'<button class="btn-delete" onclick="(async()=>{await deleteGehoelz('+p.id+');closeGehoelzDetail();})()" style="flex:1;min-width:80px">&#128465; L\u00f6schen</button>'
+    +'</div></div>';
+  var harvestHtml='';
+  if(harvests.length){
+    harvestHtml='<div class="pd-section"><div class="pd-section-title">&#127806; Ernten '+year+'</div>'+harvests.map(function(e){
+      var menge=e.harvest_amount?(e.harvest_amount+' '+(e.harvest_unit||'')):'';
+      var fin=e.harvest_final?'<span class="pt-badge pt-badge-final">&#10004; Final</span>':'<span class="pt-badge pt-badge-harvest">Teilernte</span>';
+      return '<div class="pd-row"><div class="pd-row-main">'+fmtDate(e.date)+(menge?' &middot; '+menge:'')+' '+fin+'</div>'
+        +'<div class="pd-row-actions"><button class="btn-edit" title="Datum \u00e4ndern" onclick="openEntryDateEdit('+e.id+')">&#9998;</button>'
+        +'<button class="btn-delete" onclick="(async()=>{await deleteEntry('+e.id+');refreshGehoelzDetailAfterChange()})()">&#128465;</button></div></div>';
+    }).join('')+'</div>';
+  }else{
+    harvestHtml='<div class="pd-section"><div class="empty-state" style="padding:16px"><p>Noch keine Ernte '+year+'.</p></div></div>';
+  }
+  document.getElementById('plant-detail-title').innerHTML=(p.plant_emoji||'&#127807;')+' '+esc(p.name);
+  document.getElementById('plant-detail-body').innerHTML=actions+harvestHtml;
+  document.getElementById('plant-detail-modal').style.display='flex';
+}
+function closeGehoelzDetail(){document.getElementById('plant-detail-modal').style.display='none';}
+function refreshGehoelzDetailAfterChange(){
+  renderGehoelze();
+  if(_currentGehoelzDetailId)openGehoelzDetail(_currentGehoelzDetailId);
 }
 
 function openGehoelzModal(id){
@@ -2757,7 +2795,7 @@ function openHarvestModalPerennial(perennialId){
   var pid=parseInt(perennialId);
   var p=perennials.find(function(x){return x.id===pid;});
   if(!p)return;
-  harvestSourceEntry={id:'per_'+perennialId,emoji:p.plant_emoji||'&#127807;',plant:p.name,bed_id:null,bed_name:p.location_note||'',plant_cat:p.plant_cat||null,plant_family_id:null,plant_id:p.plant_id||null};
+  harvestSourceEntry={id:'per_'+perennialId,emoji:p.plant_emoji||'&#127807;',plant:p.name,bed_id:null,bed_name:p.location_note||'',plant_cat:p.plant_cat||null,plant_family_id:null,plant_id:p.plant_id||null,perennial_id:pid};
   document.getElementById('harvest-modal-plant').textContent=(p.plant_emoji||'&#127807;')+' '+p.name+(p.location_note?' · '+p.location_note:'');
   document.getElementById('harvest-date').value=todayStr();
   document.getElementById('harvest-amount').value='';

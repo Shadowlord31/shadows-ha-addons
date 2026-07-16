@@ -69,3 +69,13 @@
 - Betrifft auch den Planung-Tab (zeigt jetzt immer alle Planungen des Jahres,
   ungefiltert) - die Filterfunktionen waren defensiv genug programmiert, dass
   keine weiteren Codeaenderungen noetig waren
+
+## 0.3.2
+
+- Gehoelze-Tab nach demselben Muster wie der Pflanzen-Tab umgebaut: Karten zeigen
+  nur noch Kurzinfo/Badges (Nx Teilernte, Final geerntet, Gerodet), Aktionen
+  (Ernte erfassen, Bearbeiten, Roden, Loeschen) wandern in eine Detailansicht
+  mit der Ernte-Historie des aktuellen Jahres (Datum pro Ernte nachtraeglich
+  aenderbar, einzelne Ernten loeschbar)
+- Fix: Ernten fuer Gehoelze setzen jetzt perennial_id auf dem Entry (fehlte bisher),
+  fuer zuverlaessige Zuordnung in der Detailansicht
