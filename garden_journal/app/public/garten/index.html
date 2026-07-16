@@ -296,9 +296,8 @@
 <body>
 <header>
   <nav class="nav-tabs" style="padding:10px 16px">
-    <button class="nav-tab" onclick="showPage('uebersicht')">&#127969; &#220;bersicht</button>
-    <button class="nav-tab" onclick="showPage('gartenplan')">&#128506;&#65039; Gartenplan</button>
     <button class="nav-tab" onclick="showPage('tagebuch')">&#128211; Tagebuch</button>
+    <button class="nav-tab" onclick="showPage('gartenplan')">&#128506;&#65039; Gartenplan</button>
     <button class="nav-tab" onclick="showPage('fruchtfolge')">&#128260; Fruchtfolge</button>
     <button class="nav-tab" onclick="showPage('costs')">&#128176; Kosten</button>
     <button class="nav-tab" onclick="showPage('stats')">&#128202; Statistiken</button>
@@ -420,12 +419,7 @@
     </div>
   </div>
 
-  <div class="page" id="page-uebersicht">
-    <div style="background:transparent">
-      <div id="uebersicht-container" style="padding:16px;background:var(--bg,#f5f0e8)"><div class="spinner" style="padding:20px">&#127807;</div></div>
-    </div>
-  </div>
-
+  
     <div class="page" id="page-gartenplan">
     <div class="card">
 <div id="gp-topbar" style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--cream);border-bottom:1px solid var(--cream-dark);flex-wrap:wrap;flex-shrink:0">
@@ -635,7 +629,7 @@ function renderFamilies2(){
   h+='</tbody></table></div>';
   cont.innerHTML=h;
 }
-function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');const idx={uebersicht:0,gartenplan:1,tagebuch:2,fruchtfolge:3,costs:4,stats:5,garten:6}[id];document.querySelectorAll('.nav-tab')[idx].classList.add('active');if(id==='stats')loadStats();if(id==='costs'){renderCostsSummary();renderCostsList()}if(id==='garten'||id==='fruchtfolge')loadRotation();if(id==='garten'&&gtActiveTab==='pflanzen-familien')renderPflanzenFamilien();if(id==='uebersicht')renderUebersicht();if(id==='fruchtfolge'&&ffActiveTab==='familien')renderFamilies2();if(id==='tagebuch')renderAllTabs();document.body.classList.toggle('gp-fullscreen',id==='gartenplan');if(id==='gartenplan')gpInit()}
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));document.getElementById('page-'+id).classList.add('active');const idx={tagebuch:0,gartenplan:1,fruchtfolge:2,costs:3,stats:4,garten:5}[id];document.querySelectorAll('.nav-tab')[idx].classList.add('active');if(id==='stats')loadStats();if(id==='costs'){renderCostsSummary();renderCostsList()}if(id==='garten'||id==='fruchtfolge')loadRotation();if(id==='garten'&&gtActiveTab==='pflanzen-familien')renderPflanzenFamilien();if(id==='fruchtfolge'&&ffActiveTab==='familien')renderFamilies2();if(id==='tagebuch')renderAllTabs();document.body.classList.toggle('gp-fullscreen',id==='gartenplan');if(id==='gartenplan')gpInit()}
 function selectCat(cat){selectedCat=cat;document.getElementById('btn-save-entry').className='btn-primary'}
 function getBedTooltip(bedId){if(!bedId||!bedOccupancy[bedId])return'';const plants=bedOccupancy[bedId];if(!plants||!plants.length)return'';const unique=[...new Map(plants.map(p=>[p.plant,p])).values()];return'🪴 Belegt: '+unique.map(p=>p.emoji+' '+p.plant).join(', ')}
 function showBedTooltip(selectEl){const bedId=selectEl.value;const tip=selectEl.parentElement.querySelector('.bed-tooltip');if(!tip)return;const txt=getBedTooltip(bedId);tip.textContent=txt;tip.style.display=txt?'block':'none'}
@@ -942,7 +936,7 @@ async function loadAll(){try{[entries,plans,beds,costs,plantFamilies,kostenkateg
     // Endgültig geerntete Pflanzeinträge global ausblenden
     var finalHarvestKeys=new Set(entries.filter(function(h){return h.cat==='harvest'&&h.harvest_final;}).map(function(h){return (h.plant||'').toLowerCase()+'|'+h.bed_id;}));
     entries=entries.filter(function(e){return !(e.cat==='plant'&&finalHarvestKeys.has((e.plant||'').toLowerCase()+'|'+e.bed_id));});
-    showError('entry-error',false);showError('plan-error',false)}catch(e){console.error('loadAll Fehler:',e);showError('entry-error',true)}try{bedOccupancy=await api('GET','/beds/occupancy')}catch(e){console.error('occupancy Fehler:',e);bedOccupancy={}}refreshBedSelects();refreshFamilySelect();refreshCostYearFilter();refreshEntryYearFilter();renderEntries();renderPlanner();renderBeds();loadRotation();renderAllTabs();renderUebersicht();showPage('uebersicht');}
+    showError('entry-error',false);showError('plan-error',false)}catch(e){console.error('loadAll Fehler:',e);showError('entry-error',true)}try{bedOccupancy=await api('GET','/beds/occupancy')}catch(e){console.error('occupancy Fehler:',e);bedOccupancy={}}refreshBedSelects();refreshFamilySelect();refreshCostYearFilter();refreshEntryYearFilter();renderEntries();renderPlanner();renderBeds();loadRotation();renderAllTabs();showPage('tagebuch');}
 // == GARTENPLAN ==
 var gpEdit=false,gpDrag=null,gpResize=null,gpSel=null;
 var gpDragOff={x:0,y:0},gpResStart=null,gpReady=false,gpSaveT=null;

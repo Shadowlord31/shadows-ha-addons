@@ -89,3 +89,10 @@
   Bearbeiten/Erledigt-Toggle/Loeschen
 - Damit folgen jetzt alle drei Tagebuch-Tabs (Pflanzen, Gehoelze, Planung) demselben
   Karte-plus-Detailansicht-Schema
+
+## 0.4.0
+
+- Uebersicht-Seite komplett entfernt (ueberschnitt sich mit Statistiken-Seite und
+  der "Garten Uebersicht"-HA-Karte)
+- Tagebuch ist jetzt die erste Navigations-Registerkarte und die Startseite
+  (statt Uebersicht)
