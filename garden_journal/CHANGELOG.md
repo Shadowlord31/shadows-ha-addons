@@ -103,3 +103,8 @@
   auch bei Planung/Gehoelze auf. Button ist jetzt tab-abhaengig: "Neuer Eintrag"
   bei Pflanzen, "Neue Planung" bei Planung, ausgeblendet bei Gehoelze (hat den
   eigenen "Gehoelz anlegen"-Button schon in der Liste)
+
+## 0.4.2
+
+- Fix: In der Pflanzen-Detailansicht fehlte bei "Pflanzungen" der Ernte-Button
+  (war beim Umbau auf den gruppierten Tab verloren gegangen)

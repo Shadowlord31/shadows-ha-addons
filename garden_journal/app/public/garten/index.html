@@ -830,7 +830,8 @@ function openPlantDetail(key){
   if(g.planted.length){
     html+='<div class="pd-section"><div class="pd-section-title">&#127809; Pflanzungen</div>'+g.planted.map(function(e){
       return '<div class="pd-row"><div class="pd-row-main">'+fmtDate(e.date)+(e.bed_id?' &middot; '+esc(getBedPath(e.bed_id)):'')+'</div>'
-        +'<div class="pd-row-actions"><button class="btn-edit" title="Datum \u00e4ndern" onclick="openEntryDateEdit('+e.id+')">&#9998;</button>'
+        +'<div class="pd-row-actions"><button class="btn-edit" title="Ernte erfassen" onclick="closePlantDetail();openHarvestModal('+e.id+')">&#127806;</button>'
+        +'<button class="btn-edit" title="Datum \u00e4ndern" onclick="openEntryDateEdit('+e.id+')">&#9998;</button>'
         +'<button class="btn-delete" onclick="(async()=>{await deleteEntry('+e.id+');refreshPlantDetailAfterChange()})()">&#128465;</button></div></div>';
     }).join('')+'</div>';
   }
