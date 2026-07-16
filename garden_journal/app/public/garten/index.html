@@ -752,6 +752,26 @@ function renderAllTabs(){
   if(tjActiveTab==="plants"){renderPlantsTabInner(q,bedId,cont,countEl);return;}
 }
 
+function harvestTotalsLabel(harvests){
+  var kg=0,pieces=0,other={};
+  harvests.forEach(function(h){
+    if(h.harvest_amount==null)return;
+    var u=h.harvest_unit||'';
+    if(u==='kg')kg+=parseFloat(h.harvest_amount);
+    else if(u==='g')kg+=parseFloat(h.harvest_amount)/1000;
+    else if(u==='St\u00fcck')pieces+=parseFloat(h.harvest_amount);
+    else{other[u]=(other[u]||0)+parseFloat(h.harvest_amount);}
+  });
+  var parts=[];
+  if(kg>0){
+    var val=(kg<1)?Math.round(kg*1000)+' g':(Math.round(kg*100)/100)+' kg';
+    parts.push(val);
+  }
+  if(pieces>0)parts.push((Math.round(pieces*100)/100)+' St\u00fcck');
+  Object.keys(other).forEach(function(u){parts.push((Math.round(other[u]*100)/100)+' '+u);});
+  return parts.join(' + ');
+}
+
 function getPlantGroups(q,bedId){
   var year=new Date().getFullYear();
   var groups={},order=[];
@@ -836,7 +856,8 @@ function openPlantDetail(key){
     }).join('')+'</div>';
   }
   if(g.harvests.length){
-    html+='<div class="pd-section"><div class="pd-section-title">&#127806; Ernten</div>'+g.harvests.map(function(e){
+    var totalLabel=harvestTotalsLabel(g.harvests);
+    html+='<div class="pd-section"><div class="pd-section-title">&#127806; Ernten'+(totalLabel?' <span style="float:right;color:var(--text-muted);font-weight:400">Gesamt: '+totalLabel+'</span>':'')+'</div>'+g.harvests.map(function(e){
       var menge=e.harvest_amount?(e.harvest_amount+' '+(e.harvest_unit||'')):'';
       var fin=e.harvest_final?'<span class="pt-badge pt-badge-final">&#10004; Final</span>':'<span class="pt-badge pt-badge-harvest">Teilernte</span>';
       return '<div class="pd-row"><div class="pd-row-main">'+fmtDate(e.date)+(menge?' &middot; '+menge:'')+' '+fin+'</div>'
@@ -2701,7 +2722,8 @@ function openGehoelzDetail(id){
     +'</div></div>';
   var harvestHtml='';
   if(harvests.length){
-    harvestHtml='<div class="pd-section"><div class="pd-section-title">&#127806; Ernten '+year+'</div>'+harvests.map(function(e){
+    var gTotalLabel=harvestTotalsLabel(harvests);
+    harvestHtml='<div class="pd-section"><div class="pd-section-title">&#127806; Ernten '+year+(gTotalLabel?' <span style="float:right;color:var(--text-muted);font-weight:400">Gesamt: '+gTotalLabel+'</span>':'')+'</div>'+harvests.map(function(e){
       var menge=e.harvest_amount?(e.harvest_amount+' '+(e.harvest_unit||'')):'';
       var fin=e.harvest_final?'<span class="pt-badge pt-badge-final">&#10004; Final</span>':'<span class="pt-badge pt-badge-harvest">Teilernte</span>';
       return '<div class="pd-row"><div class="pd-row-main">'+fmtDate(e.date)+(menge?' &middot; '+menge:'')+' '+fin+'</div>'

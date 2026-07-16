@@ -108,3 +108,10 @@
 
 - Fix: In der Pflanzen-Detailansicht fehlte bei "Pflanzungen" der Ernte-Button
   (war beim Umbau auf den gruppierten Tab verloren gegangen)
+
+## 0.4.3
+
+- Ernten-Sektion in Pflanzen- und Gehoelze-Detailansicht zeigt jetzt eine
+  Gesamtsumme (g/kg werden korrekt zusammengerechnet und in die sinnvollere
+  Einheit umgerechnet, z.B. 500g + 1,5kg = 2 kg). Stueck bleibt als eigene,
+  nicht kompatible Einheit getrennt
