@@ -61,3 +61,11 @@
   aenderbar, einzelne Ereignisse loeschbar
 - Lokal gegen echte migrierte Produktivdaten getestet (18 Pflanzengruppen korrekt
   gebildet, u.a. mehrfach gepflanzte und final geerntete Pflanzen richtig erkannt)
+
+## 0.3.1
+
+- Filterleiste im Tagebuch entfernt (Suche, Beet-Filter, Jahr-Filter) - unnoetig
+  geworden durch den neuen "Pflanzen"-Tab, der ohnehin nur das aktuelle Jahr zeigt
+- Betrifft auch den Planung-Tab (zeigt jetzt immer alle Planungen des Jahres,
+  ungefiltert) - die Filterfunktionen waren defensiv genug programmiert, dass
+  keine weiteren Codeaenderungen noetig waren
