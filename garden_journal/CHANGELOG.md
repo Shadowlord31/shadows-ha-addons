@@ -79,3 +79,13 @@
   aenderbar, einzelne Ernten loeschbar)
 - Fix: Ernten fuer Gehoelze setzen jetzt perennial_id auf dem Entry (fehlte bisher),
   fuer zuverlaessige Zuordnung in der Detailansicht
+
+## 0.3.3
+
+- Planung-Tab nach demselben Muster wie Pflanzen/Gehoelze umgebaut: Karten zeigen
+  nur noch Kurzinfo (Nx geplant / Nx erledigt) pro Pflanze, gruppiert nach plant_id -
+  gleiche Pflanze mehrfach verplant erscheint nur einmal
+- Detailansicht listet jede einzelne Planung (Beet, Monat, Notiz, Status) mit
+  Bearbeiten/Erledigt-Toggle/Loeschen
+- Damit folgen jetzt alle drei Tagebuch-Tabs (Pflanzen, Gehoelze, Planung) demselben
+  Karte-plus-Detailansicht-Schema

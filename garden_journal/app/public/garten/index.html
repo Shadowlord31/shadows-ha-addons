@@ -748,49 +748,7 @@ function renderAllTabs(){
     });
     cont.innerHTML=permGroupedHtml;return;
   }
-  if(tjActiveTab==="planung"){
-    var yr2=filterYear||new Date().getFullYear();
-    var plngs=plans.filter(p=>!p.is_permanent&&p.year===yr2
-      &&(!bedId||String(p.bed_id)===bedId)
-      &&(!q||p.plant.toLowerCase().includes(q)))
-      .sort((a,b)=>a.month!==b.month?a.month-b.month:a.plant.localeCompare(b.plant));
-    if(countEl)countEl.textContent=plngs.length+(plngs.length===1?" Eintrag":" Eintr\u00e4ge");
-    if(!plngs.length){cont.innerHTML="<div class='empty-state'><span class='big-icon'>\U0001F4C5</span><h3>Keine Planungen f\u00fcr "+yr2+"</h3></div>";return;}
-    var MS=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-    function fmtRange(m,mt){if(!m)return "–";var s=MS[m-1]||"";var e=mt&&mt!==m?MS[mt-1]||"":"";return e?s+"–"+e:s;}
-    // Gruppierung nach Zeitraum (Monat)
-    var planGroups={}, planGroupOrder=[];
-    plngs.forEach(function(p){
-      var key=p.month?MS[p.month-1]+(p.month_to&&p.month_to!==p.month?'–'+MS[p.month_to-1]:''):'– Kein Monat';
-      if(!planGroups[key]){planGroups[key]=[];planGroupOrder.push(key);}
-      planGroups[key].push(p);
-    });
-    var planHtml='';
-    planGroupOrder.forEach(function(key){
-      var groupCards=planGroups[key].map(function(p){
-        var beet=p.bed_id?esc(getBedPath(p.bed_id)):'';
-        var fam=p.family_name?'<span style="background:'+(p.family_color||'#ccc')+'22;color:'+(p.family_color||'#666')+';border-radius:6px;padding:1px 7px;font-size:.75rem">'+esc(p.family_name)+'</span>':'';
-        var kat=p.plant_cat?'<span style="background:#2980b9;color:#fff;border-radius:4px;padding:1px 7px;font-size:.75rem">'+(PLANT_CAT_ICONS[p.plant_cat]||'')+' '+esc(p.plant_cat)+'</span>':'';
-        var st=p.done?'<span style="background:#27ae60;color:#fff;border-radius:4px;padding:1px 7px;font-size:.75rem">✓ Erledigt</span>':'';
-        var acts='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
-          +'<button class="btn-edit" onclick="editPlan('+p.id+')" style="flex:1">&#9998; Bearbeiten</button>'
-          +'<button class="btn-edit" onclick="toggleDone('+p.id+')" style="flex:1">'+(p.done?'&#8617; Rükgängig':'&#10004; Erledigt')+'</button>'
-          +'<button class="btn-delete" onclick="deletePlan('+p.id+')">&#128465;</button>'
-          +'</div>';
-        return '<div style="padding:12px 16px;border-bottom:1px solid var(--cream-dark);border-right:1px solid var(--cream-dark);opacity:'+(p.done?'.6':'1')+'">'
-          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-          +'<span style="font-size:1.4rem">'+p.emoji+'</span>'
-          +'<div style="flex:1"><div style="font-weight:700;color:var(--green-deep)">'+esc(p.plant)+'</div>'
-          +'<div style="font-size:.78rem;color:var(--text-muted)">'+(beet||'Kein Beet')+(p.note?' · '+esc(p.note):'')+'</div></div></div>'
-          +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'+fam+kat+st+'</div>'
-          +acts+'</div>';
-      }).join('');
-      planHtml+='<div style="margin-bottom:20px">'
-        +'<div style="font-size:.82rem;font-weight:700;color:var(--green-deep);padding:6px 4px 4px;border-bottom:2px solid var(--cream-dark);margin-bottom:4px">&#128197; '+esc(key)+'</div>'
-        +'<div class="ub-grid">'+groupCards+'</div></div>';
-    });
-    cont.innerHTML=planHtml;return;
-  }
+  if(tjActiveTab==="planung"){renderPlanungTabInner(cont,countEl);return;}
   if(tjActiveTab==="plants"){renderPlantsTabInner(q,bedId,cont,countEl);return;}
 }
 
@@ -916,6 +874,68 @@ async function saveEntryDateEdit(){
     showToast('&#128197; Datum ge\u00e4ndert');
     refreshPlantDetailAfterChange();
   }catch(err){showToast('&#10060; Fehler');}
+}
+
+function renderPlanungTabInner(cont,countEl){
+  var year=new Date().getFullYear();
+  var plngs=plans.filter(function(p){return !p.is_permanent&&p.year===year;});
+  var groups={},order=[];
+  function keyFor(p){return p.plant_id?'id_'+p.plant_id:'name_'+(p.plant||'').toLowerCase();}
+  plngs.forEach(function(p){
+    var k=keyFor(p);
+    if(!groups[k]){groups[k]={name:p.plant,emoji:p.emoji,items:[]};order.push(k);}
+    groups[k].items.push(p);
+  });
+  if(countEl)countEl.textContent=order.length+(order.length===1?' Pflanze':' Pflanzen');
+  if(!order.length){cont.innerHTML="<div class='empty-state'><span class='big-icon'>&#128197;</span><h3>Keine Planungen f\u00fcr "+year+"</h3></div>";return;}
+  order.sort(function(a,b){return groups[a].name.localeCompare(groups[b].name);});
+  var cards=order.map(function(k){
+    var g=groups[k];
+    var doneCount=g.items.filter(function(p){return p.done;}).length;
+    var openCount=g.items.length-doneCount;
+    var badges=[];
+    if(openCount)badges.push('<span class="pt-badge pt-badge-planned">&#128197; '+openCount+'x geplant</span>');
+    if(doneCount)badges.push('<span class="pt-badge pt-badge-final">&#10004; '+doneCount+'x erledigt</span>');
+    return '<div class="plant-tab-card" onclick="openPlanungDetail(\''+k.replace(/'/g,"\\'")+'\')">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      +'<span style="font-size:1.6rem">'+(g.emoji||'&#128197;')+'</span>'
+      +'<div style="flex:1"><div style="font-weight:700;color:var(--green-deep)">'+esc(g.name)+'</div></div>'
+      +'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px">'+badges.join('')+'</div>'
+      +'</div>';
+  });
+  cont.innerHTML='<div class="ub-grid">'+cards.join('')+'</div>';
+}
+
+var _currentPlanungDetailKey=null;
+function openPlanungDetail(key){
+  var year=new Date().getFullYear();
+  var plngs=plans.filter(function(p){return !p.is_permanent&&p.year===year;});
+  function keyFor(p){return p.plant_id?'id_'+p.plant_id:'name_'+(p.plant||'').toLowerCase();}
+  var items=plngs.filter(function(p){return keyFor(p)===key;});
+  if(!items.length){closePlantDetail();return;}
+  _currentPlanungDetailKey=key;
+  var MS=["Jan","Feb","M\u00e4r","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+  items.sort(function(a,b){return(a.month||0)-(b.month||0);});
+  var html='<div class="pd-section">'+items.map(function(p){
+    var beet=p.bed_id?esc(getBedPath(p.bed_id)):'Kein Beet';
+    var monat=p.month?(MS[p.month-1]||'')+(p.month_to&&p.month_to!==p.month?'\u2013'+(MS[p.month_to-1]||''):''):'Kein Monat';
+    var st=p.done?'<span class="pt-badge pt-badge-final">&#10004; Erledigt</span>':'';
+    return '<div class="pd-row"><div class="pd-row-main">'+esc(beet)+' &middot; '+monat+(p.note?' &middot; '+esc(p.note):'')+(st?' '+st:'')+'</div>'
+      +'<div class="pd-row-actions"><button class="btn-edit" title="Bearbeiten" onclick="closePlantDetail();editPlan('+p.id+')">&#9998;</button>'
+      +'<button class="btn-edit" title="'+(p.done?'R\u00fcckg\u00e4ngig':'Erledigt')+'" onclick="(async()=>{await toggleDone('+p.id+');refreshPlanungDetailAfterChange()})()">'+(p.done?'&#8617;':'&#10004;')+'</button>'
+      +'<button class="btn-delete" onclick="(async()=>{await deletePlan('+p.id+');refreshPlanungDetailAfterChange()})()">&#128465;</button></div></div>';
+  }).join('')+'</div>';
+  var first=items[0];
+  document.getElementById('plant-detail-title').innerHTML=(first.emoji||'&#128197;')+' '+esc(first.plant);
+  document.getElementById('plant-detail-body').innerHTML=html;
+  document.getElementById('plant-detail-modal').style.display='flex';
+}
+function refreshPlanungDetailAfterChange(){
+  renderAllTabs();
+  if(_currentPlanungDetailKey){
+    setTimeout(function(){openPlanungDetail(_currentPlanungDetailKey);},50);
+  }
 }
 
 async function loadAll(){try{[entries,plans,beds,costs,plantFamilies,kostenkategorien,plantCatalog,plantCategories,perennials]=await Promise.all([api('GET','/entries'),api('GET','/plans?year='+planYear),api('GET','/beds'),api('GET','/costs'),api('GET','/plant-families'),api('GET','/costs/kategorien'),api('GET','/plants'),api('GET','/plant-categories'),api('GET','/perennials')]);updateCatMaps();
