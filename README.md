@@ -9,6 +9,10 @@ A self-hosted garden journal / garden diary as a Home Assistant add-on. Track be
 plantings, harvests, perennials, planning, and costs — with matching Lovelace cards
 (see [gartentagebuch-cards](https://github.com/Shadowlord31/gartentagebuch-cards)).
 
+### [Shift Planner](./shift_planner) *(in Arbeit)*
+Self-hosted shift & vacation planner — shifts, work times, vacation budget/carryover,
+holidays. Migrated from the standalone [dienstplan](https://github.com/Shadowlord31/dienstplan) app.
+
 ## Installation
 
 1. In Home Assistant, go to **Settings > Add-ons > Add-on Store**
