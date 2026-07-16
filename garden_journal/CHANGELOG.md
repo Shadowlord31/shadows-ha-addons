@@ -96,3 +96,10 @@
   der "Garten Uebersicht"-HA-Karte)
 - Tagebuch ist jetzt die erste Navigations-Registerkarte und die Startseite
   (statt Uebersicht)
+
+## 0.4.1
+
+- Fix: "Neuer Eintrag"-Button war fest auf den Pflanzen-Tab bezogen und tauchte
+  auch bei Planung/Gehoelze auf. Button ist jetzt tab-abhaengig: "Neuer Eintrag"
+  bei Pflanzen, "Neue Planung" bei Planung, ausgeblendet bei Gehoelze (hat den
+  eigenen "Gehoelz anlegen"-Button schon in der Liste)

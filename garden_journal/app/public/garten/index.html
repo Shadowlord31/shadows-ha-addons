@@ -315,7 +315,7 @@
         </div>
         <div id="tj-filters" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <span class="count-badge" id="tj-count"></span>
-          <button class="btn-primary btn-sm" onclick="openEntryModal()">&#9999; Neuer Eintrag</button>
+          <button class="btn-primary btn-sm" id="tj-new-btn" onclick="openEntryModal()">&#9999; Neuer Eintrag</button>
         </div>
       </div>
       <div id="tj-container"><div class="spinner">&#127793;</div></div>
@@ -673,6 +673,12 @@ function switchTjTab(t){
   // Jahresfilter ergibt bei "Pflanzen" keinen Sinn - immer aktuelles Jahr
   var yf=document.getElementById('tj-filter-year');
   if(yf)yf.style.display=(t==='plants')?'none':'';
+  var nb=document.getElementById('tj-new-btn');
+  if(nb){
+    if(t==='plants'){nb.style.display='';nb.textContent='\u270f\ufe0f Neuer Eintrag';nb.setAttribute('onclick','openEntryModal()');}
+    else if(t==='planung'){nb.style.display='';nb.textContent='\ud83d\udcc5 Neue Planung';nb.setAttribute('onclick','openPlanModal()');}
+    else{nb.style.display='none';}
+  }
   if(t==='gehoelze')renderGehoelze();else renderAllTabs();
 }
 function refreshTjFilters(){
