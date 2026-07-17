@@ -219,8 +219,12 @@ router.get('/api/dp/ferien-proxy', auth, (req, res) => {
   const https = require('https');
   https.get(`https://ferien-api.de/api/v1/holidays/${bundesland}/${year}`, r => {
     let d = ''; r.on('data', c => d += c);
-    r.on('end', () => { try { res.json(JSON.parse(d)); } catch { res.status(500).json({ error: 'parse' }); } });
-  }).on('error', e => res.status(500).json({ error: e.message }));
+    r.on('end', () => {
+      if (r.statusCode === 429) return res.status(502).json({ error: 'ferien-api.de ist aktuell rate-limitiert (429) -- bitte spaeter erneut versuchen' });
+      if (r.statusCode >= 400) return res.status(502).json({ error: `ferien-api.de antwortete mit HTTP ${r.statusCode}` });
+      try { res.json(JSON.parse(d)); } catch { res.status(502).json({ error: 'ferien-api.de lieferte keine gueltige Antwort' }); }
+    });
+  }).on('error', e => res.status(502).json({ error: `ferien-api.de nicht erreichbar: ${e.message}` }));
 });
 
 // ===== SETTINGS =====
