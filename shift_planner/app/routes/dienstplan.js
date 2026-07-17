@@ -15,11 +15,9 @@ function auth(req, res, next) {
   if (!req.dpUser) return res.status(401).json({ error: 'Nicht angemeldet' });
   next();
 }
-function admin(req, res, next) {
-  if (!req.dpUser) return res.status(401).json({ error: 'Nicht angemeldet' });
-  if (!req.dpUser.is_admin) return res.status(403).json({ error: 'Kein Admin-Zugriff' });
-  next();
-}
+// Kein Admin/User-Split: jeder ueber Ingress identifizierte HA-User darf alles
+// (Haushalts-App fuer wenige, vertraute Personen -- kein Rollenmodell noetig).
+const admin = auth;
 
 // ===== ME =====
 router.get('/api/dp/me', auth, (req, res) => {

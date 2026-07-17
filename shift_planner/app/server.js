@@ -15,7 +15,7 @@ app.use('/', require('./routes/dienstplan'));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public/dienstplan/index.html')));
 app.get('/dienstplan*', (_req, res) => res.sendFile(path.join(__dirname, 'public/dienstplan/index.html')));
 app.get('/admin', (req, res) => {
-  if (!req.dpUser?.is_admin) return res.status(403).send('Kein Admin-Zugriff');
+  if (!req.dpUser) return res.status(401).send('Nicht angemeldet');
   res.sendFile(path.join(__dirname, 'public/admin/index.html'));
 });
 

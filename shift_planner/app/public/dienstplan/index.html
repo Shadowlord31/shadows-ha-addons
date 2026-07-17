@@ -536,7 +536,7 @@ function setLoggedOut(){
 async function checkSession(){
   try{
     const d=await api('/api/dp/me');
-    setLoggedIn(d.displayName, d.isAdmin||false);
+    setLoggedIn(d.displayName);
     await loadSTs();
     showTab('cal');
   }catch{ loadDash(); }
@@ -549,11 +549,7 @@ function showTab(t){
   const app=document.getElementById('app');
   const loggedIn=app.classList.contains('logged-in');
   const isAdm=app.classList.contains('is-admin');
-  // Admin-Tab: nur für Admins
-  if(t==='adm'&&!isAdm){openLoginScreen();return;}
-  // User-Tabs: nicht für Admins, nicht ohne Login
   if(PRIVATE_TABS.includes(t)&&!loggedIn){openLoginScreen();return;}
-  if(PRIVATE_TABS.includes(t)&&isAdm) return; // Admin darf keine User-Tabs öffnen
   document.querySelectorAll('.tc-content').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
   document.getElementById(`tab-${t}`).classList.add('active');

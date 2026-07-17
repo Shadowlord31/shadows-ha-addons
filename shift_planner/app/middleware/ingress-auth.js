@@ -7,7 +7,8 @@ const db = require('../db/dienstplan');
 // nicht bei direktem Port-Zugriff -- das Addon sollte daher NICHT zusaetzlich
 // ueber den Host-Port exponiert werden.
 //
-// Erster jemals angelegter User wird automatisch Admin.
+// Kein Admin/User-Split: jeder HA-User, der die App oeffnet, wird automatisch
+// als dp_user angelegt und darf alles (eigene Daten + Verwaltung).
 
 const findOrCreate = db.transaction((haUserId, username, displayName) => {
   let user = db.prepare('SELECT * FROM dp_users WHERE ha_user_id=?').get(haUserId);
@@ -19,11 +20,9 @@ const findOrCreate = db.transaction((haUserId, username, displayName) => {
     return db.prepare('SELECT * FROM dp_users WHERE id=?').get(user.id);
   }
 
-  const userCount = db.prepare('SELECT COUNT(*) c FROM dp_users').get().c;
-  const isAdmin = userCount === 0 ? 1 : 0;
   const info = db.prepare(
-    'INSERT INTO dp_users (ha_user_id,username,display_name,is_admin) VALUES (?,?,?,?)'
-  ).run(haUserId, username, displayName || username, isAdmin);
+    'INSERT INTO dp_users (ha_user_id,username,display_name) VALUES (?,?,?)'
+  ).run(haUserId, username, displayName || username);
   return db.prepare('SELECT * FROM dp_users WHERE id=?').get(info.lastInsertRowid);
 });
 
