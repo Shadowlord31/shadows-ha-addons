@@ -15,13 +15,10 @@ function auth(req, res, next) {
   if (!req.dpUser) return res.status(401).json({ error: 'Nicht angemeldet' });
   next();
 }
-// Kein Admin/User-Split: jeder ueber Ingress identifizierte HA-User darf alles
-// (Haushalts-App fuer wenige, vertraute Personen -- kein Rollenmodell noetig).
-const admin = auth;
 
 // ===== ME =====
 router.get('/api/dp/me', auth, (req, res) => {
-  res.json({ userId: req.dpUser.id, displayName: req.dpUser.display_name, isAdmin: !!req.dpUser.is_admin });
+  res.json({ userId: req.dpUser.id, displayName: req.dpUser.display_name });
 });
 
 // ===== SHIFT TYPES =====
@@ -200,7 +197,7 @@ router.get('/api/dp/worktimes/target/:year/:month', auth, (req, res) => {
 // ===== HOLIDAYS =====
 router.get('/api/dp/holidays', auth, (req, res) => {
   const { year, bundesland } = req.query;
-  let q = 'SELECT * FROM dp_holidays WHERE 1=1'; const p = [];
+  let q = 'SELECT * FROM dp_holidays WHERE user_id=?'; const p = [req.dpUser.id];
   if (year) { q += ' AND year=?'; p.push(year); }
   if (bundesland) { q += ' AND (bundesland=? OR bundesland IS NULL)'; p.push(bundesland); }
   q += ' ORDER BY start_date';
@@ -208,12 +205,12 @@ router.get('/api/dp/holidays', auth, (req, res) => {
 });
 router.post('/api/dp/holidays', auth, (req, res) => {
   const { name, start_date, end_date, type, bundesland, year } = req.body;
-  const row = db.prepare(`INSERT INTO dp_holidays (name,start_date,end_date,type,bundesland,year) VALUES (?,?,?,?,?,?) RETURNING *`)
-    .get(name, start_date, end_date, type || 'ferien', bundesland || null, year || new Date().getFullYear());
+  const row = db.prepare(`INSERT INTO dp_holidays (user_id,name,start_date,end_date,type,bundesland,year) VALUES (?,?,?,?,?,?,?) RETURNING *`)
+    .get(req.dpUser.id, name, start_date, end_date, type || 'ferien', bundesland || null, year || new Date().getFullYear());
   res.json(row);
 });
 router.delete('/api/dp/holidays/:id', auth, (req, res) => {
-  db.prepare('DELETE FROM dp_holidays WHERE id=?').run(req.params.id);
+  db.prepare('DELETE FROM dp_holidays WHERE id=? AND user_id=?').run(req.params.id, req.dpUser.id);
   res.json({ ok: true });
 });
 router.get('/api/dp/ferien-proxy', auth, (req, res) => {
@@ -335,72 +332,6 @@ router.get('/api/dp/dashboard', (req, res) => {
     }
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ===== ADMIN =====
-router.get('/api/dp/admin/users', admin, (req, res) => {
-  const { year } = req.query;
-  const users = db.prepare('SELECT id,username,display_name,vacation_budget,vacation_base,bundesland,work_days,weekly_hours,is_admin,ha_user_id FROM dp_users ORDER BY id').all();
-  if (!year) return res.json(users);
-  const enriched = [];
-  for (const u of users) {
-    const carry = db.prepare('SELECT carryover FROM dp_vacation_carryover WHERE user_id=? AND year=?').get(u.id, year);
-    const vac = db.prepare("SELECT start_date as s,end_date as e,status FROM dp_vacations WHERE user_id=? AND year=? AND status!='abgelehnt'").all(u.id, year);
-    const wd = u.work_days || '1111100';
-    const used = vac.filter(v => v.status === 'genommen').reduce((sum, v) => sum + workDaysCount(wd, v.s, v.e), 0);
-    const carryover = carry?.carryover || 0;
-    const base = u.vacation_base || u.vacation_budget || 30;
-    enriched.push({ ...u, carryover, used_vacation_days: used, remaining_vacation_days: base + carryover - used });
-  }
-  res.json(enriched);
-});
-router.put('/api/dp/admin/users/:id', admin, (req, res) => {
-  const { display_name, vacation_budget, bundesland, work_days, is_admin, carryover, carryover_year } = req.body;
-  try {
-    if (carryover !== undefined) {
-      const year = carryover_year || new Date().getFullYear();
-      db.prepare('INSERT INTO dp_vacation_carryover (user_id,year,carryover) VALUES (?,?,?) ON CONFLICT(user_id,year) DO UPDATE SET carryover=?')
-        .run(req.params.id, year, parseInt(carryover) || 0, parseInt(carryover) || 0);
-    }
-    if (is_admin !== undefined) {
-      db.prepare('UPDATE dp_users SET is_admin=? WHERE id=?').run(b(is_admin), req.params.id);
-    }
-    const row = db.prepare('UPDATE dp_users SET display_name=?,vacation_budget=?,vacation_base=?,bundesland=?,work_days=? WHERE id=? RETURNING id,username,display_name,vacation_budget,vacation_base,bundesland,work_days,weekly_hours,is_admin')
-      .get(display_name, vacation_budget || 30, vacation_budget || 30, bundesland || 'TH', work_days || '1111100', req.params.id);
-    res.json(row);
-  } catch (e) { res.status(400).json({ error: e.message }); }
-});
-router.delete('/api/dp/admin/users/:id', admin, (req, res) => {
-  if (parseInt(req.params.id) === req.dpUser.id) return res.status(400).json({ error: 'Eigenen Account nicht löschbar' });
-  db.prepare('DELETE FROM dp_users WHERE id=?').run(req.params.id);
-  res.json({ ok: true });
-});
-router.get('/api/dp/admin/holidays', admin, (req, res) => {
-  const { year, bl } = req.query; let q = 'SELECT * FROM dp_holidays WHERE 1=1'; const p = [];
-  if (year) { q += ' AND year=?'; p.push(year); }
-  if (bl) { q += ' AND bundesland=?'; p.push(bl); }
-  res.json(db.prepare(q + ' ORDER BY start_date').all(...p));
-});
-router.post('/api/dp/admin/holidays', admin, (req, res) => {
-  const { name, start_date, end_date, type, bundesland, year } = req.body;
-  try {
-    const row = db.prepare('INSERT INTO dp_holidays (name,start_date,end_date,type,bundesland,year) VALUES (?,?,?,?,?,?) RETURNING *')
-      .get(name, start_date, end_date, type || 'ferien', bundesland || null, year || new Date().getFullYear());
-    res.json(row);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-router.delete('/api/dp/admin/holidays/:id', admin, (req, res) => {
-  db.prepare('DELETE FROM dp_holidays WHERE id=?').run(req.params.id);
-  res.json({ ok: true });
-});
-router.get('/api/dp/admin/ferien-proxy', admin, (req, res) => {
-  const { bundesland, year } = req.query;
-  if (!bundesland || !year) return res.status(400).json({ error: 'bundesland und year benötigt' });
-  const https = require('https');
-  https.get(`https://ferien-api.de/api/v1/holidays/${bundesland}/${year}`, r => {
-    let d = ''; r.on('data', c => d += c);
-    r.on('end', () => { try { res.json(JSON.parse(d)); } catch { res.status(500).json({ error: 'parse' }); } });
-  }).on('error', e => res.status(500).json({ error: e.message }));
 });
 
 module.exports = router;

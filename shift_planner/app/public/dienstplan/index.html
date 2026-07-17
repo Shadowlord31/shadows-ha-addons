@@ -63,8 +63,6 @@ input[type=color]{height:40px;padding:4px;cursor:pointer}
 .ni.active{background:rgba(79,142,247,.15);color:var(--accent)}
 .logged-only{display:none}
 .logged-in .logged-only{display:flex}
-.admin-only{display:none!important}
-.logged-in.is-admin .admin-only{display:flex!important}
 .ni-icon{font-size:16px;width:20px;text-align:center}
 .btn-logout{margin:12px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);cursor:pointer;font-size:13px;transition:all .15s;font-family:var(--fb)}
 .btn-logout:hover{background:var(--bg3);color:var(--red);border-color:var(--red)}
@@ -242,7 +240,7 @@ input[type=color]{height:40px;padding:4px;cursor:pointer}
       <a class="ni logged-only" onclick="showTab('vac')" data-tab="vac"><span class="ni-icon">🌴</span><span>Urlaub</span></a>
       <a class="ni logged-only" onclick="showTab('stat')" data-tab="stat"><span class="ni-icon">📊</span><span>Statistik</span></a>
       <a class="ni logged-only" onclick="showTab('set')" data-tab="set"><span class="ni-icon">⚙️</span><span>Einstellungen</span></a>
-      <a class="ni logged-only admin-only" onclick="showTab('adm')" data-tab="adm"><span class="ni-icon">🛡️</span><span>Admin</span></a>
+      <a class="ni logged-only" onclick="showTab('adm')" data-tab="adm"><span class="ni-icon">📅</span><span>Feiertage</span></a>
     </div>
     <button class="btn-logout" id="btn-logout" onclick="logout()" style="display:none">Abmelden</button>
     <button class="btn-logout" id="btn-login" onclick="openLoginScreen()" style="color:var(--accent);border-color:rgba(79,142,247,.3)">🔐 Anmelden</button>
@@ -393,26 +391,10 @@ input[type=color]{height:40px;padding:4px;cursor:pointer}
       </div>
     </div>
 
-    <!-- ADMIN -->
+    <!-- FEIERTAGE -->
     <div id="tab-adm" class="tc-content">
-      <div class="ph"><h2>🛡️ Administration</h2></div>
+      <div class="ph"><h2>📅 Ferien &amp; Feiertage</h2></div>
       <div class="set-grid">
-        <div class="card" style="grid-column:1/-1">
-          <div class="ch">
-            <h3>Datenbankverbindung</h3>
-            <button class="btn btn-sm btn-s" onclick="openDbSettingsModal()">Datenbankverbindung</button>
-          </div>
-        </div>
-
-        <!-- USER VERWALTUNG -->
-        <div class="card" style="grid-column:1/-1">
-          <div class="ch">
-            <h3>👥 Benutzer</h3>
-            <button class="btn btn-sm btn-p" onclick="openUserModal()">+ Neuer Benutzer</button>
-          </div>
-          <div id="adm-users"></div>
-        </div>
-
         <!-- FERIEN VERWALTUNG -->
         <div class="card" style="grid-column:1/-1">
           <div class="ch">
@@ -463,7 +445,7 @@ const S = {
   wo:0, cm:new Date().getMonth(), cy:new Date().getFullYear(),
   wm:new Date().getMonth(), wy:new Date().getFullYear(),
   vy:new Date().getFullYear(), fy:new Date().getFullYear(),
-  sts:[], tab:'dash', work_days:'1111100', isAdmin:false
+  sts:[], tab:'dash', work_days:'1111100'
 };
 const MO=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const DD=['So','Mo','Di','Mi','Do','Fr','Sa'];
@@ -501,25 +483,13 @@ function closeLoginScreen(){document.getElementById('ls').classList.add('hidden'
 function login(){alert('Anmeldung erfolgt automatisch ueber Home Assistant.');closeLoginScreen()}
 function logout(){alert('Abmeldung erfolgt ueber Home Assistant (nicht ueber diese App).')}
 
-function setLoggedIn(displayName, isAdmin=false){
-  S.isAdmin=isAdmin;
+function setLoggedIn(displayName){
   document.getElementById('sbu').textContent=displayName;
   document.getElementById('mobu').textContent=displayName;
   document.getElementById('btn-logout').style.display='';
   document.getElementById('btn-login').style.display='none';
   document.getElementById('app').classList.add('logged-in');
-  if(isAdmin){
-    // Admin: nur Admin-Tab sichtbar, alle User-Tabs ausblenden
-    document.getElementById('app').classList.add('is-admin');
-    document.getElementById('dash-login-hint').style.display='none';
-    // Sidebar nur Admin-Elemente zeigen
-    document.querySelectorAll('.ni.logged-only:not(.admin-only)').forEach(el=>el.style.display='none');
-  } else {
-    document.getElementById('app').classList.remove('is-admin');
-    document.getElementById('dash-login-hint').style.display='none';
-    // Admin-Tab für normale User verstecken
-    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
-  }
+  document.getElementById('dash-login-hint').style.display='none';
 }
 function setLoggedOut(){
   document.getElementById('sbu').textContent='';
@@ -527,7 +497,7 @@ function setLoggedOut(){
   document.getElementById('btn-logout').style.display='none';
   document.getElementById('btn-login').style.display='';
   document.getElementById('dash-login-hint').style.display='';
-  document.getElementById('app').classList.remove('logged-in','is-admin');
+  document.getElementById('app').classList.remove('logged-in');
   // Sidebar-Elemente zurücksetzen
   document.querySelectorAll('.ni.logged-only').forEach(el=>el.style.display='');
   showTab('dash');
@@ -543,12 +513,11 @@ async function checkSession(){
 }
 
 // ===== NAV =====
-const TITLES={dash:'Dashboard',cal:'Dienstplan',work:'Arbeitszeit',vac:'Urlaub',stat:'Statistik',set:'Einstellungen',adm:'Admin'};
-const PRIVATE_TABS=['cal','work','vac','stat','set'];
+const TITLES={dash:'Dashboard',cal:'Dienstplan',work:'Arbeitszeit',vac:'Urlaub',stat:'Statistik',set:'Einstellungen',adm:'Feiertage'};
+const PRIVATE_TABS=['cal','work','vac','stat','set','adm'];
 function showTab(t){
   const app=document.getElementById('app');
   const loggedIn=app.classList.contains('logged-in');
-  const isAdm=app.classList.contains('is-admin');
   if(PRIVATE_TABS.includes(t)&&!loggedIn){openLoginScreen();return;}
   document.querySelectorAll('.tc-content').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
@@ -579,78 +548,6 @@ function closeModal(){document.getElementById('mo').classList.add('hidden')}
 function escAttr(v){
   return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-let pendingDbSettings=null;
-function readDbSettingsForm(){
-  return {
-    host:document.getElementById('db-host').value.trim(),
-    port:parseInt(document.getElementById('db-port').value,10)||5432,
-    user:document.getElementById('db-user').value.trim(),
-    password:document.getElementById('db-password').value,
-    database:document.getElementById('db-database').value.trim(),
-    sessionSecret:document.getElementById('db-session-secret').value.trim()
-  };
-}
-function markDbSettingsUntested(){
-  const save=document.getElementById('db-save');
-  const msg=document.getElementById('db-msg');
-  if(save)save.disabled=true;
-  if(msg){msg.textContent='';msg.className='msgarea';}
-}
-async function openDbSettingsModal(){
-  try{
-    const d=await api('/api/settings');
-    const c=d.config||{};
-    const body=`
-      <div class="g2">
-        <div class="fg"><label>Host</label><input id="db-host" value="${escAttr(c.host)}"></div>
-        <div class="fg"><label>Port</label><input id="db-port" type="number" min="1" max="65535" value="${escAttr(c.port||5432)}"></div>
-      </div>
-      <div class="g2">
-        <div class="fg"><label>User</label><input id="db-user" value="${escAttr(c.user)}"></div>
-        <div class="fg"><label>Datenbankname</label><input id="db-database" value="${escAttr(c.database)}"></div>
-      </div>
-      <div class="fg"><label>Password</label><input id="db-password" type="password" value="${escAttr(c.password)}"></div>
-      <div class="fg"><label>SESSION_SECRET</label><input id="db-session-secret" value="${escAttr(c.sessionSecret)}"></div>
-      <div id="db-msg" class="msgarea"></div>`;
-    openModal('Datenbankverbindung',body,`
-      <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-s" onclick="testDbSettings()">Verbindung testen</button>
-      <button class="btn btn-p" id="db-save" onclick="confirmDbSettingsSave()" disabled>Speichern</button>`);
-    ['db-host','db-port','db-user','db-password','db-database','db-session-secret'].forEach(id=>document.getElementById(id).addEventListener('input',markDbSettingsUntested));
-  }catch(e){toast(e.message,'e')}
-}
-async function testDbSettings(){
-  const msg=document.getElementById('db-msg');
-  const save=document.getElementById('db-save');
-  msg.className='msgarea';
-  msg.textContent='Verbindung wird getestet...';
-  save.disabled=true;
-  try{
-    await api('/api/settings',{method:'POST',body:JSON.stringify({...readDbSettingsForm(),action:'test'})});
-    msg.className='msgarea ms';
-    msg.textContent='Verbindung erfolgreich getestet.';
-    save.disabled=false;
-  }catch(e){
-    msg.className='msgarea me';
-    msg.textContent=e.message;
-  }
-}
-function confirmDbSettingsSave(){
-  pendingDbSettings=readDbSettingsForm();
-  openModal('Datenbankverbindung ändern',
-    '<p style="color:var(--text2);line-height:1.6">Achtung: Die Datenbankverbindung wird geändert. Alle aktiven Sessions werden beendet und die App verbindet sich neu. Möchtest du wirklich fortfahren?</p>',
-    '<button class="btn btn-s" onclick="closeModal()">Abbrechen</button><button class="btn btn-d" onclick="saveDbSettings()">Ja, ändern</button>');
-}
-async function saveDbSettings(){
-  try{
-    await api('/api/settings',{method:'POST',body:JSON.stringify({...pendingDbSettings,action:'save'})});
-    toast('Datenbankverbindung geändert');
-    setLoggedOut();
-    closeModal();
-    openLoginScreen();
-  }catch(e){toast(e.message,'e')}
-}
-
 // ===== SHIFT TYPES =====
 async function loadSTs(){try{S.sts=await api('/api/dp/shifttypes')}catch{S.sts=[]}}
 function getST(id){return S.sts.find(t=>t.id==id)}
@@ -1443,94 +1340,19 @@ async function loadStat(){
     </div>`;
 }
 
-// ===== ADMIN =====
+// ===== FEIERTAGE =====
 const S_ADM={fy:new Date().getFullYear()};
 function changeAdmFY(d){S_ADM.fy+=d;loadAdmin();}
 
 async function loadAdmin(){
   document.getElementById('adm-fylbl').textContent=S_ADM.fy;
-  await loadAdmUsers();
   await loadAdmHolidays();
 }
 
-// --- USER VERWALTUNG ---
-async function loadAdmUsers(){
-  let users=[];try{users=await api('/api/dp/admin/users')}catch(e){document.getElementById('adm-users').innerHTML=`<div class="empty">${e.message}</div>`;return;}
-  const BL={BW:'Baden-W.',BY:'Bayern',BE:'Berlin',BB:'Brandenburg',HB:'Bremen',HH:'Hamburg',HE:'Hessen',MV:'Meckl.-Vorp.',NI:'Niedersachs.',NW:'NRW',RP:'Rheinl.-Pfalz',SL:'Saarland',SN:'Sachsen',ST:'Sachsen-Anh.',SH:'Schlesw.-Holst.',TH:'Thüringen'};
-  document.getElementById('adm-users').innerHTML=users.map(u=>`
-    <div class="li">
-      <div style="font-size:22px;margin-right:4px">${u.is_admin?'🛡️':'👤'}</div>
-      <div class="lmain">
-        <div class="lname">${u.display_name} <span style="color:var(--text3);font-size:12px">@${u.username}</span>
-          ${u.is_admin?'<span class="badge b-genehmigt" style="margin-left:6px">Admin</span>':''}
-        </div>
-        <div class="lsub">${u.vacation_budget} Tage Urlaub · ${BL[u.bundesland]||u.bundesland} · Arbeitstage: ${(u.work_days||'1111100').split('').map((b,i)=>b==='1'?['Mo','Di','Mi','Do','Fr','Sa','So'][i]:'').filter(Boolean).join('/')}</div>
-      </div>
-      <div class="lact" style="opacity:1">
-        <button class="bico" onclick='openUserModal(${JSON.stringify(u)})'>✏️</button>
-        <button class="bico" onclick="delAdmUser(${u.id})">🗑️</button>
-      </div>
-    </div>`).join('');
-}
-
-function openUserModal(u){
-  const isNew=!u;
-  const wdChecks=['Mo','Di','Mi','Do','Fr','Sa','So'].map((d,i)=>`
-    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:4px 8px;font-size:12px">
-      <input type="checkbox" id="uwd-${i}" style="width:auto;accent-color:var(--accent)" ${(u?.work_days||'1111100')[i]==='1'?'checked':''}>${d}
-    </label>`).join('');
-  const blOptions=['BW','BY','BE','BB','HB','HH','HE','MV','NI','NW','RP','SL','SN','ST','SH','TH'].map(b=>`<option value="${b}" ${(u?.bundesland||'TH')===b?'selected':''}>${b}</option>`).join('');
-  const body=`
-    ${isNew?`<div class="fg"><label>Benutzername</label><input type="text" id="u-username" placeholder="z.B. max"></div>`:''}
-    <div class="fg"><label>Anzeigename</label><input type="text" id="u-dn" value="${u?.display_name||''}"></div>
-    <div class="fg"><label>Passwort ${isNew?'':'(leer lassen = unverändert)'}</label><input type="password" id="u-pw" placeholder="${isNew?'Passwort':'Neues Passwort (optional)'}"></div>
-    <div class="g2">
-      <div class="fg"><label>Urlaubstage/Jahr</label><input type="number" id="u-bud" min="0" max="60" value="${u?.vacation_budget||30}"></div>
-      <div class="fg"><label>Bundesland</label><select id="u-bl">${blOptions}</select></div>
-    </div>
-    <div class="fg"><label>Arbeitstage</label><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${wdChecks}</div></div>
-    <div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-      <input type="checkbox" id="u-admin" style="width:auto;accent-color:var(--accent)" ${u?.is_admin?'checked':''}>
-      Admin-Rechte
-    </label></div>`;
-  openModal(isNew?'➕ Neuer Benutzer':'✏️ Benutzer bearbeiten',body,`
-    <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
-    <button class="btn btn-p" onclick="saveAdmUser(${u?.id||'null'})">Speichern</button>`);
-}
-
-async function saveAdmUser(id){
-  const dn=document.getElementById('u-dn').value;
-  const pw=document.getElementById('u-pw').value;
-  const bud=document.getElementById('u-bud').value;
-  const bl=document.getElementById('u-bl').value;
-  const wd=Array.from({length:7},(_,i)=>document.getElementById(`uwd-${i}`)?.checked?'1':'0').join('');
-  const isAdm=document.getElementById('u-admin').checked;
-  if(!dn){toast('Anzeigename erforderlich','e');return;}
-  try{
-    if(id){
-      await api(`/api/dp/admin/users/${id}`,{method:'PUT',body:JSON.stringify({display_name:dn,vacation_budget:parseInt(bud),bundesland:bl,work_days:wd,is_admin:isAdm,password:pw||undefined})});
-      toast('Benutzer aktualisiert');
-    } else {
-      const un=document.getElementById('u-username').value;
-      if(!un){toast('Benutzername erforderlich','e');return;}
-      if(!pw){toast('Passwort erforderlich','e');return;}
-      await api('/api/dp/admin/users',{method:'POST',body:JSON.stringify({username:un,display_name:dn,password:pw,vacation_budget:parseInt(bud),bundesland:bl,work_days:wd,is_admin:isAdm})});
-      toast('Benutzer angelegt');
-    }
-    closeModal();loadAdmUsers();
-  }catch(e){toast(e.message,'e');}
-}
-
-async function delAdmUser(id){
-  if(!confirm('Benutzer wirklich löschen? Alle Daten werden entfernt.'))return;
-  try{await api(`/api/dp/admin/users/${id}`,{method:'DELETE'});toast('Benutzer gelöscht');loadAdmUsers();}catch(e){toast(e.message,'e');}
-}
-
-// --- FERIEN VERWALTUNG ---
 async function loadAdmHolidays(){
   const bl=document.getElementById('adm-bl')?.value||'TH';
   let hols=[];
-  try{hols=await api(`/api/dp/admin/holidays?year=${S_ADM.fy}&bl=${bl}`)}catch(e){document.getElementById('adm-holidays').innerHTML=`<div class="empty">${e.message}</div>`;return;}
+  try{hols=await api(`/api/dp/holidays?year=${S_ADM.fy}&bundesland=${bl}`)}catch(e){document.getElementById('adm-holidays').innerHTML=`<div class="empty">${e.message}</div>`;return;}
   const ferien=hols.filter(h=>h.type==='ferien').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
   const ftage=hols.filter(h=>h.type==='feiertag').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
   const row=h=>`<div class="li">
@@ -1564,28 +1386,27 @@ async function saveAdmHoliday(){
   const t=document.getElementById('aht').value,bl=document.getElementById('ahbl').value;
   if(!n||!s||!e){toast('Alle Felder ausfüllen','e');return;}
   try{
-    await api('/api/dp/admin/holidays',{method:'POST',body:JSON.stringify({name:n,start_date:s,end_date:e,type:t,bundesland:bl,year:new Date(s).getFullYear()})});
+    await api('/api/dp/holidays',{method:'POST',body:JSON.stringify({name:n,start_date:s,end_date:e,type:t,bundesland:bl,year:new Date(s).getFullYear()})});
     closeModal();toast('Gespeichert');loadAdmHolidays();
   }catch(err){toast(err.message,'e');}
 }
 
 async function delAdmHoliday(id){
   if(!confirm('Eintrag löschen?'))return;
-  try{await api(`/api/dp/admin/holidays/${id}`,{method:'DELETE'});toast('Gelöscht');loadAdmHolidays();}catch(e){toast(e.message,'e');}
+  try{await api(`/api/dp/holidays/${id}`,{method:'DELETE'});toast('Gelöscht');loadAdmHolidays();}catch(e){toast(e.message,'e');}
 }
 
 async function loadAdmFerienAPI(){
   const bl=document.getElementById('adm-bl')?.value||'TH';
   try{
     toast('Lade Ferien...');
-    const r=await fetch(`/api/dp/admin/ferien-proxy?bundesland=${bl}&year=${S_ADM.fy}`);
+    const r=await fetch(`/api/dp/ferien-proxy?bundesland=${bl}&year=${S_ADM.fy}`);
     if(!r.ok)throw new Error('API nicht erreichbar');
     const data=await r.json();
-    for(const f of data) await api('/api/dp/admin/holidays',{method:'POST',body:JSON.stringify({name:f.name,start_date:f.start.slice(0,10),end_date:f.end.slice(0,10),type:'ferien',bundesland:bl,year:S_ADM.fy})});
+    for(const f of data) await api('/api/dp/holidays',{method:'POST',body:JSON.stringify({name:f.name,start_date:f.start.slice(0,10),end_date:f.end.slice(0,10),type:'ferien',bundesland:bl,year:S_ADM.fy})});
     toast(`${data.length} Ferieneinträge geladen`);loadAdmHolidays();
   }catch(e){toast('API-Fehler: '+e.message,'e');}
 }
-
 // ===== INIT =====
 checkSession();
 // Dashboard alle 5 Minuten neu laden (für Flurtablet)

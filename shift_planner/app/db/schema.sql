@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS dp_users (
   bundesland VARCHAR(10) DEFAULT 'BY',
   work_days VARCHAR(7) DEFAULT '1111100',
   weekly_hours DECIMAL(5,2) DEFAULT 40,
-  is_admin INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -69,6 +68,7 @@ CREATE TABLE IF NOT EXISTS dp_vacation_carryover (
 
 CREATE TABLE IF NOT EXISTS dp_holidays (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES dp_users(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
