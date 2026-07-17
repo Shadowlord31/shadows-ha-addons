@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dienstplan Admin</title>
+<style>
+:root{--bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--bg4:#252d3f;--border:#2a3348;--text:#e8ecf4;--text2:#8b95a9;--accent:#4f8ef7;--red:#f87171;--green:#34d399;--yellow:#fbbf24}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}.wrap{max-width:1180px;margin:0 auto;padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.brand h1{margin:0;font-size:26px}.brand p{margin:4px 0 0;color:var(--text2)}.actions{display:flex;gap:8px}.tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--border)}.tab{background:transparent;color:var(--text2);border:0;padding:12px 14px;cursor:pointer;border-bottom:2px solid transparent}.tab.active{color:var(--accent);border-color:var(--accent)}.panel{display:none}.panel.active{display:block}.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}.ch{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)}.ch h2{font-size:16px;margin:0}button{border:0;border-radius:8px;background:var(--bg4);color:var(--text);padding:9px 12px;cursor:pointer;font-weight:600}button.primary{background:var(--accent);color:white}button.danger{background:rgba(248,113,113,.14);color:var(--red);border:1px solid rgba(248,113,113,.28)}button:disabled{opacity:.5;cursor:not-allowed}.ico{width:38px;height:38px;padding:0}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}th{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}tr:last-child td{border-bottom:0}.muted{color:var(--text2)}input,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;outline:none}input:focus,select:focus{border-color:var(--accent)}.num{max-width:110px}.row-actions{display:flex;gap:8px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.open{display:flex}.mb{width:100%;max-width:620px;max-height:90vh;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.45)}.mh{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}.mh h3{margin:0;font-size:17px}.body{padding:20px 22px}.foot{display:flex;justify-content:flex-end;gap:10px;padding:0 22px 20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fg{margin-bottom:14px}.fg label{display:block;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}.days{display:flex;gap:7px;flex-wrap:wrap}.day{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 8px}.day input{width:auto}.msg{font-size:13px;margin-top:6px}.ok{color:var(--green)}.err{color:var(--red)}@media(max-width:780px){.wrap{padding:14px}.grid{grid-template-columns:1fr}table{display:block;overflow-x:auto}.top{align-items:flex-start;flex-direction:column}.actions{width:100%;justify-content:flex-end}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Administration</h1><p>Benutzerverwaltung und Urlaubsdaten</p></div>
+    <div class="actions">
+      <a class="ico" title="Zurueck zum Dienstplan" href="/dienstplan" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">←</a>
+    </div>
+  </header>
+  <nav class="tabs">
+    <button class="tab active" data-tab="users" onclick="showTab('users')">Benutzerverwaltung</button>
+    <button class="tab" data-tab="vacation" onclick="showTab('vacation')">Urlaubsdaten</button>
+  </nav>
+  <section id="users" class="panel active">
+    <div class="card">
+      <div class="ch"><h2>Benutzer</h2><p class="muted" style="margin:0;font-size:12px">Neue Benutzer legen sich automatisch beim ersten Ingress-Login an</p></div>
+      <div id="usersTable"></div>
+    </div>
+  </section>
+  <section id="vacation" class="panel">
+    <div class="card">
+      <div class="ch"><h2>Urlaubsdaten</h2><div style="display:flex;gap:8px;align-items:center"><span class="muted">Jahr</span><input id="vacYear" class="num" type="number" onchange="loadVacation()" /></div></div>
+      <div id="vacTable"></div>
+    </div>
+  </section>
+</div>
+
+<div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="mb"><div class="mh"><h3 id="mt"></h3><button onclick="closeModal()">×</button></div><div class="body" id="mbody"></div><div class="foot" id="mfoot"></div></div></div>
+<script>
+const BL=['BW','BY','BE','BB','HB','HH','HE','MV','NI','NW','RP','SL','SN','ST','SH','TH'];
+let users=[],settingsOk=false,pendingSettings=null;
+const api=async(url,opts={})=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Fehler');return d};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function openModal(t,b,f){mt.textContent=t;mbody.innerHTML=b;mfoot.innerHTML=f;modal.classList.add('open')}function closeModal(){modal.classList.remove('open')}
+function showTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===t));if(t==='vacation')loadVacation()}
+function dayChecks(wd='1111100',prefix='wd'){return ['Mo','Di','Mi','Do','Fr','Sa','So'].map((d,i)=>`<label class="day"><input id="${prefix}-${i}" type="checkbox" ${wd[i]==='1'?'checked':''}>${d}</label>`).join('')}
+function readDays(prefix='wd'){return Array.from({length:7},(_,i)=>document.getElementById(`${prefix}-${i}`)?.checked?'1':'0').join('')}
+async function loadUsers(){users=await api('/api/dp/admin/users');usersTable.innerHTML=`<table><thead><tr><th>Anzeigename</th><th>Benutzername</th><th>Urlaubstage</th><th>Bundesland</th><th>Arbeitstage</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.display_name)}</td><td class="muted">${esc(u.username)}</td><td>${u.vacation_budget||30}</td><td>${esc(u.bundesland||'TH')}</td><td>${(u.work_days||'1111100').split('').map((v,i)=>v==='1'?['Mo','Di','Mi','Do','Fr','Sa','So'][i]:'').filter(Boolean).join(', ')}</td><td><div class="row-actions"><button onclick='openUserModal(${JSON.stringify(u)})'>Bearbeiten</button><button class="danger" onclick='deleteUser(${u.id},${JSON.stringify(u.display_name)})'>Loeschen</button></div></td></tr>`).join('')}</tbody></table>`}
+function openUserModal(u=null){const opts=BL.map(b=>`<option value="${b}" ${(u?.bundesland||'TH')===b?'selected':''}>${b}</option>`).join('');openModal('Benutzer bearbeiten',`<div class="grid"><div class="fg"><label>Anzeigename</label><input id="dn" value="${esc(u?.display_name)}"></div></div><div class="grid"><div class="fg"><label>Urlaubsbudget</label><input id="bud" type="number" value="${u?.vacation_budget||30}"></div><div class="fg"><label>Bundesland</label><select id="bl">${opts}</select></div></div><div class="fg"><label>Arbeitstage</label><div class="days">${dayChecks(u?.work_days||'1111100')}</div></div>`,`<button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="saveUser(${u?.id||'null'})">Speichern</button>`)}
+async function saveUser(id){const body={display_name:dn.value.trim(),vacation_budget:parseInt(bud.value)||30,bundesland:bl.value,work_days:readDays()};await api(`/api/dp/admin/users/${id}`,{method:'PUT',body:JSON.stringify(body)});closeModal();loadUsers();loadVacation()}
+async function deleteUser(id,name){if(!confirm(`Benutzer ${name} wirklich loeschen? Alle Schicht- und Urlaubsdaten werden ebenfalls geloescht.`))return;await api(`/api/dp/admin/users/${id}`,{method:'DELETE'});loadUsers();loadVacation()}
+async function loadVacation(){const y=vacYear.value||new Date().getFullYear();const rows=await api(`/api/dp/admin/users?year=${y}`);vacTable.innerHTML=`<table><thead><tr><th>Anzeigename</th><th>Urlaubsbudget</th><th>Uebertrag</th><th>Genommen</th><th>Verbleibend</th><th></th></tr></thead><tbody>${rows.map(u=>`<tr><td>${esc(u.display_name)}</td><td><input class="num" id="vb-${u.id}" type="number" value="${u.vacation_base||u.vacation_budget||30}"></td><td><input class="num" id="co-${u.id}" type="number" value="${u.carryover||0}"></td><td>${u.used_vacation_days||0}</td><td>${u.remaining_vacation_days||0}</td><td><button class="primary" onclick="saveVacation(${u.id})">Speichern</button></td></tr>`).join('')}</tbody></table>`}
+async function saveVacation(id){const u=users.find(x=>x.id===id)||{};await api(`/api/dp/admin/users/${id}`,{method:'PUT',body:JSON.stringify({display_name:u.display_name,vacation_budget:parseInt(document.getElementById(`vb-${id}`).value)||30,bundesland:u.bundesland||'TH',work_days:u.work_days||'1111100',carryover:parseInt(document.getElementById(`co-${id}`).value)||0,carryover_year:parseInt(vacYear.value)})});await loadUsers();await loadVacation()}
+vacYear.value=new Date().getFullYear();loadUsers();
+</script>
+</body>
+</html>

@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dienstplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f1117; --bg2:#161b27; --bg3:#1e2535; --bg4:#252d3f;
+  --border:#2a3348; --text:#e8ecf4; --text2:#8b95a9; --text3:#5a6478;
+  --accent:#4f8ef7; --accent2:#3a7aef;
+  --green:#34d399; --yellow:#fbbf24; --red:#f87171; --purple:#a78bfa;
+  --fh:'Syne',sans-serif; --fb:'DM Sans',sans-serif;
+  --r:12px; --rs:8px; --shadow:0 4px 24px rgba(0,0,0,.4);
+  --sw:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px;line-height:1.6;min-height:100vh}
+.hidden{display:none!important}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);z-index:9998}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px;width:360px;box-shadow:var(--shadow),0 0 60px rgba(79,142,247,.08)}
+.login-logo{text-align:center;margin-bottom:32px}
+.ll-icon{font-size:40px;display:block;margin-bottom:10px}
+.login-logo h1{font-family:var(--fh);font-size:28px;font-weight:800;letter-spacing:-.5px}
+.login-logo p{color:var(--text2);font-size:13px;margin-top:4px}
+.err{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:13px}
+
+/* FORM */
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);padding:10px 12px;font-family:var(--fb);font-size:14px;transition:border-color .2s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--bg3)}
+textarea{resize:vertical;min-height:70px}
+input[type=color]{height:40px;padding:4px;cursor:pointer}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--rs);border:none;cursor:pointer;font-family:var(--fb);font-size:14px;font-weight:500;transition:all .15s}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-s{background:var(--bg4);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--bg3)}
+.btn-d{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}.btn-d:hover{background:rgba(248,113,113,.25)}
+.btn-full{width:100%;justify-content:center;padding:12px}
+.btn-sm{padding:6px 12px;font-size:12px}
+.bico{padding:6px 8px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:13px;transition:all .15s}
+.bico:hover{color:var(--text);background:var(--bg3)}
+
+/* LAYOUT */
+.app{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sw);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .25s}
+.sb-head{display:flex;align-items:center;gap:12px;padding:20px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{font-size:24px}
+.sb-title{font-family:var(--fh);font-weight:700;font-size:16px}
+.sb-user{font-size:11px;color:var(--accent);font-weight:500}
+.nav-items{flex:1;padding:12px 8px}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);color:var(--text2);cursor:pointer;text-decoration:none;transition:all .15s;margin-bottom:2px;font-size:14px}
+.ni:hover{background:var(--bg3);color:var(--text)}
+.ni.active{background:rgba(79,142,247,.15);color:var(--accent)}
+.logged-only{display:none}
+.logged-in .logged-only{display:flex}
+.admin-only{display:none!important}
+.logged-in.is-admin .admin-only{display:flex!important}
+.ni-icon{font-size:16px;width:20px;text-align:center}
+.btn-logout{margin:12px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);cursor:pointer;font-size:13px;transition:all .15s;font-family:var(--fb)}
+.btn-logout:hover{background:var(--bg3);color:var(--red);border-color:var(--red)}
+
+/* MOBILE HEADER */
+.mob-head{display:none;position:fixed;top:0;left:0;right:0;height:56px;background:var(--bg2);border-bottom:1px solid var(--border);align-items:center;padding:0 16px;z-index:99;gap:12px}
+.burger{background:none;border:none;color:var(--text);font-size:20px;cursor:pointer}
+.mob-title{font-family:var(--fh);font-weight:700;font-size:16px;flex:1}
+.mob-user{font-size:11px;color:var(--accent)}
+
+/* MAIN */
+.main{margin-left:var(--sw);flex:1;padding:28px;max-width:calc(100vw - var(--sw))}
+
+/* PAGE HEADER */
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.ph h2{font-family:var(--fh);font-size:26px;font-weight:800;letter-spacing:-.5px}
+.nav-ctrl{display:flex;align-items:center;gap:8px}
+.nav-ctrl button{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:var(--rs);cursor:pointer;font-size:16px;transition:all .15s}
+.nav-ctrl button:hover{background:var(--bg4)}
+.nav-ctrl span{font-weight:600;min-width:160px;text-align:center;font-size:14px}
+.btn-today{font-size:12px!important;padding:6px 10px!important;background:rgba(79,142,247,.15)!important;color:var(--accent)!important;border-color:rgba(79,142,247,.3)!important}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:20px;overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.ch h3{font-family:var(--fh);font-weight:700;font-size:15px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:16px;margin-bottom:20px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+.sl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.sv{font-family:var(--fh);font-size:28px;font-weight:800;line-height:1}
+.ss{font-size:11px;color:var(--text3);margin-top:4px}
+.sg .sv{color:var(--green)}.sy .sv{color:var(--yellow)}.sb .sv{color:var(--accent)}.sr .sv{color:var(--red)}.sp .sv{color:var(--purple)}
+
+/* WEEK */
+.wg{display:grid;grid-template-columns:repeat(7,1fr);padding:16px;gap:8px}
+.wd{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s;min-height:90px}
+.wd:hover{background:var(--bg4);border-color:var(--accent)}
+.wd.today{border-color:var(--accent);background:rgba(79,142,247,.1)}
+.wd.weekend{opacity:.6}
+.wdn{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.wdd{font-family:var(--fh);font-weight:700;font-size:18px;margin-bottom:6px}
+.wsb{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#fff}
+.wdf{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* CALENDAR */
+.cal-wrap{padding:16px}
+.cal-h{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
+.cal-hd{text-align:center;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;padding:6px}
+.cal-b{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:8px;min-height:80px;cursor:pointer;transition:all .15s;position:relative}
+.cc:hover{background:var(--bg4);border-color:var(--accent)}
+.cc.today{border-color:var(--accent)}
+.cc.other{opacity:.3}
+.cc.weekend{background:rgba(255,255,255,.02)}
+.cc.vacday{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3)}
+.cc.holday{background:rgba(251,191,36,.06)}
+.cdn{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.cc.today .cdn{color:var(--accent)}
+.csc{display:block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chl{font-size:9px;color:var(--yellow);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ndot{position:absolute;top:4px;right:4px;width:6px;height:6px;background:var(--yellow);border-radius:50%}
+
+/* LISTS */
+.empty{text-align:center;color:var(--text3);padding:32px;font-size:13px}
+.li{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:12px;transition:background .1s}
+.li:hover{background:var(--bg3)}
+.li:last-child{border-bottom:none}
+.ldate{font-weight:600;font-size:13px;min-width:100px}
+.lmain{flex:1}
+.lname{font-weight:500}
+.lsub{font-size:12px;color:var(--text2)}
+.lact{display:flex;gap:6px;opacity:0;transition:opacity .15s}
+.li:hover .lact{opacity:1}
+.hb{display:flex;align-items:center;gap:8px;min-width:140px}
+.hbbg{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.hbf{height:100%;border-radius:3px;transition:width .3s}
+.hbv{font-size:12px;color:var(--text2);min-width:60px;text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.b-geplant{background:rgba(251,191,36,.15);color:var(--yellow)}
+.b-genehmigt{background:rgba(52,211,153,.15);color:var(--green)}
+.b-genommen{background:rgba(79,142,247,.15);color:var(--accent)}
+.b-abgelehnt{background:rgba(248,113,113,.15);color:var(--red)}
+.cdot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+/* VACATION UPCOMING */
+.vui{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.vui:last-child{border-bottom:none}
+.vcount{background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.25);border-radius:var(--rs);padding:8px 12px;text-align:center;min-width:64px}
+.vnum{font-family:var(--fh);font-size:22px;font-weight:800;color:var(--accent);line-height:1}
+.vlbl{font-size:10px;color:var(--text2)}
+.vi{flex:1}
+.vd{font-weight:600;font-size:14px}
+.vdur{font-size:12px;color:var(--text2)}
+
+/* FERIEN */
+.fs-title{font-family:var(--fh);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);padding:12px 20px 8px;border-bottom:1px solid var(--border)}
+.fer-act{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+
+/* SETTINGS */
+.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px;align-items:start}
+.set-grid .card .fg{padding:0 20px 16px}
+.set-grid .card .btn{margin:0 20px 20px}
+.msgarea{padding:8px 20px;font-size:13px}
+.ms{color:var(--green)}.me{color:var(--red)}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+.mb{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);animation:mi .2s ease}
+@keyframes mi{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border)}
+.mh h3{font-family:var(--fh);font-weight:700;font-size:17px}
+.mc{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:4px 8px;border-radius:6px;transition:all .15s}
+.mc:hover{background:var(--bg4);color:var(--text)}
+.mbody{padding:20px 24px}
+.mfoot{padding:12px 24px 20px;display:flex;gap:10px;justify-content:flex-end}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* TOAST */
+#tc{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 18px;font-size:13px;box-shadow:var(--shadow);animation:ti .3s ease;min-width:220px}
+.ts{border-color:rgba(52,211,153,.4);color:var(--green)}.te{border-color:rgba(248,113,113,.4);color:var(--red)}
+@keyframes ti{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* TAB CONTENT */
+.tc-content{display:none}.tc-content.active{display:block}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
+  .mob-head{display:flex}
+  .main{margin-left:0;padding:72px 14px 20px;max-width:100vw}
+  .wg{gap:4px}.wd{padding:8px 4px;min-height:70px}.wdd{font-size:14px}
+  .cc{min-height:60px;padding:6px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .set-grid{grid-template-columns:1fr}
+  .ph{flex-direction:column;align-items:flex-start}
+  .lact{opacity:1}
+  .hb{min-width:auto;width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="ls" class="login-screen hidden">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="ll-icon">📅</span>
+      <h1>Dienstplan</h1>
+      <p>Dein persönlicher Arbeitsplaner</p>
+    </div>
+    <div id="le" class="err hidden"></div>
+    <div class="fg"><label>Benutzername</label><input id="lu" type="text" autocomplete="username" placeholder="thomas"></div>
+    <div class="fg"><label>Passwort</label><input id="lp" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn btn-p btn-full" onclick="login()">Anmelden</button>
+    <button class="btn btn-s btn-full" style="margin-top:8px" onclick="closeLoginScreen()">Abbrechen</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <span class="sb-logo">📅</span>
+      <div><div class="sb-title">Dienstplan</div><div class="sb-user" id="sbu">-</div></div>
+    </div>
+    <div class="nav-items">
+      <a class="ni active" onclick="showTab('dash')" data-tab="dash"><span class="ni-icon">🏠</span><span>Dashboard</span></a>
+      <a class="ni logged-only" onclick="showTab('cal')" data-tab="cal"><span class="ni-icon">📋</span><span>Dienstplan</span></a>
+      <a class="ni logged-only" onclick="showTab('work')" data-tab="work"><span class="ni-icon">⏱️</span><span>Arbeitszeit</span></a>
+      <a class="ni logged-only" onclick="showTab('vac')" data-tab="vac"><span class="ni-icon">🌴</span><span>Urlaub</span></a>
+      <a class="ni logged-only" onclick="showTab('stat')" data-tab="stat"><span class="ni-icon">📊</span><span>Statistik</span></a>
+      <a class="ni logged-only" onclick="showTab('set')" data-tab="set"><span class="ni-icon">⚙️</span><span>Einstellungen</span></a>
+      <a class="ni logged-only admin-only" onclick="showTab('adm')" data-tab="adm"><span class="ni-icon">🛡️</span><span>Admin</span></a>
+    </div>
+    <button class="btn-logout" id="btn-logout" onclick="logout()" style="display:none">Abmelden</button>
+    <button class="btn-logout" id="btn-login" onclick="openLoginScreen()" style="color:var(--accent);border-color:rgba(79,142,247,.3)">🔐 Anmelden</button>
+  </nav>
+
+  <header class="mob-head">
+    <button class="burger" onclick="toggleSidebar()">☰</button>
+    <span class="mob-title" id="mobt">Dashboard</span>
+    <span class="mob-user" id="mobu"></span>
+  </header>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div id="tab-dash" class="tc-content active">
+      <div class="ph">
+        <h2>Dashboard</h2>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="nav-ctrl">
+            <button onclick="changeWeek(-1)">‹</button>
+            <span id="wlbl" style="min-width:180px;text-align:center;font-size:13px;font-weight:600"></span>
+            <button onclick="changeWeek(1)">›</button>
+            <button class="btn-today" onclick="goWeek()">Heute</button>
+          </div>
+          <div id="dash-login-hint" style="font-size:12px;color:var(--text3)">Nur Leseansicht · <a href="#" onclick="openLoginScreen()" style="color:var(--accent)">Anmelden</a> für alle Funktionen</div>
+        </div>
+      </div>
+      <div id="dash-users"></div>
+    </div>
+
+    <!-- DIENSTPLAN / KALENDER -->
+    <div id="tab-cal" class="tc-content">
+      <div class="ph">
+        <h2>Dienstplan</h2>
+        <div class="nav-ctrl">
+          <button onclick="changeMon(-1)">‹</button>
+          <span id="mlbl"></span>
+          <button onclick="changeMon(1)">›</button>
+          <button class="btn-today" onclick="goMon()">Heute</button>
+        </div>
+      </div>
+      <div class="card"><div class="cal-wrap" id="calgrid"></div></div>
+    </div>
+
+    <!-- ARBEITSZEIT -->
+    <div id="tab-work" class="tc-content">
+      <div class="ph">
+        <h2>Arbeitszeit</h2>
+        <div class="nav-ctrl">
+          <button onclick="changeWMon(-1)">‹</button>
+          <span id="wmlbl"></span>
+          <button onclick="changeWMon(1)">›</button>
+        </div>
+      </div>
+      <div class="stats" id="wstats"></div>
+      <div class="card">
+        <div class="ch"><h3>Stundenübersicht</h3><button class="btn btn-sm btn-p" onclick="openWTModal()">+ Eintrag</button></div>
+        <div id="wtlist"></div>
+      </div>
+    </div>
+
+    <!-- URLAUB -->
+    <div id="tab-vac" class="tc-content">
+      <div class="ph">
+        <h2>Urlaub</h2>
+        <div class="nav-ctrl">
+          <button onclick="changeVY(-1)">‹</button>
+          <span id="vylbl"></span>
+          <button onclick="changeVY(1)">›</button>
+        </div>
+      </div>
+      <div class="stats" id="vstats"></div>
+      <div class="card">
+        <div class="ch"><h3>Urlaubsplanung</h3><button class="btn btn-sm btn-p" onclick="openVacModal()">+ Planen</button></div>
+        <div id="vaclist"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h3>📅 Ferien &amp; Feiertage <span id="vac-fer-year" style="color:var(--text2);font-weight:400;font-size:13px"></span></h3></div>
+        <div id="vac-fer-list"></div>
+      </div>
+    </div>
+
+    <!-- FERIEN -->
+
+    <!-- STATISTIK -->
+    <div id="tab-stat" class="tc-content">
+      <div class="ph">
+        <h2>Statistik</h2>
+        <div class="nav-ctrl">
+          <button onclick="changeStatY(-1)">‹</button>
+          <span id="stat-ylbl" style="min-width:50px;text-align:center;font-weight:600"></span>
+          <button onclick="changeStatY(1)">›</button>
+        </div>
+      </div>
+      <div id="stat-content"></div>
+    </div>
+
+    <!-- EINSTELLUNGEN -->
+    <div id="tab-set" class="tc-content">
+      <div class="ph"><h2>Einstellungen</h2></div>
+      <div class="set-grid">
+        <div class="card">
+          <div class="ch"><h3>Profil</h3></div>
+          <div class="fg" style="padding:16px 20px 0"><label>Anzeigename</label><input id="sdn" type="text"></div>
+          <div class="fg" style="padding:8px 20px 0"><label>Urlaubstage / Jahr</label><input id="sbud" type="number" min="0" max="60"></div>
+          <div class="fg" style="padding:8px 20px 0">
+            <label>Wochenstunden (Soll)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="swh" type="number" min="1" max="60" step="0.5" style="max-width:100px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-s" onclick="document.getElementById('swh').value=40">40h</button>
+                <button class="btn btn-sm btn-s" onclick="document.getElementById('swh').value=38.5">38,5h</button>
+                <button class="btn btn-sm btn-s" onclick="document.getElementById('swh').value=35">35h</button>
+                <button class="btn btn-sm btn-s" onclick="document.getElementById('swh').value=30">30h</button>
+              </div>
+            </div>
+          </div>
+          <div class="fg" style="padding:8px 20px 0"><label>Bundesland (Ferien)</label>
+            <select id="sbl">
+              <option value="BW">Baden-Württemberg</option><option value="BY">Bayern</option>
+              <option value="BE">Berlin</option><option value="BB">Brandenburg</option>
+              <option value="HB">Bremen</option><option value="HH">Hamburg</option>
+              <option value="HE">Hessen</option><option value="MV">Mecklenburg-Vorpommern</option>
+              <option value="NI">Niedersachsen</option><option value="NW">NRW</option>
+              <option value="RP">Rheinland-Pfalz</option><option value="SL">Saarland</option>
+              <option value="SN">Sachsen</option><option value="ST">Sachsen-Anhalt</option>
+              <option value="SH">Schleswig-Holstein</option><option value="TH">Thüringen</option>
+            </select>
+          </div>
+          <button class="btn btn-p" onclick="saveSettings()">Speichern</button>
+          <div class="fg" style="padding:8px 20px 16px">
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Arbeitstage</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-0" style="width:auto;accent-color:var(--accent)"> Mo</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-1" style="width:auto;accent-color:var(--accent)"> Di</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-2" style="width:auto;accent-color:var(--accent)"> Mi</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-3" style="width:auto;accent-color:var(--accent)"> Do</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-4" style="width:auto;accent-color:var(--accent)"> Fr</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-5" style="width:auto;accent-color:var(--accent)"> Sa</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px"><input type="checkbox" id="wd-6" style="width:auto;accent-color:var(--accent)"> So</label>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px">Bestimmt wie Urlaubstage gezählt werden</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><h3>Schichtarten</h3><button class="btn btn-sm btn-p" onclick="openSTModal()">+ Neu</button></div>
+          <div id="stlist"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div id="tab-adm" class="tc-content">
+      <div class="ph"><h2>🛡️ Administration</h2></div>
+      <div class="set-grid">
+        <div class="card" style="grid-column:1/-1">
+          <div class="ch">
+            <h3>Datenbankverbindung</h3>
+            <button class="btn btn-sm btn-s" onclick="openDbSettingsModal()">Datenbankverbindung</button>
+          </div>
+        </div>
+
+        <!-- USER VERWALTUNG -->
+        <div class="card" style="grid-column:1/-1">
+          <div class="ch">
+            <h3>👥 Benutzer</h3>
+            <button class="btn btn-sm btn-p" onclick="openUserModal()">+ Neuer Benutzer</button>
+          </div>
+          <div id="adm-users"></div>
+        </div>
+
+        <!-- FERIEN VERWALTUNG -->
+        <div class="card" style="grid-column:1/-1">
+          <div class="ch">
+            <h3>📅 Ferien &amp; Feiertage</h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <div class="nav-ctrl">
+                <button onclick="changeAdmFY(-1)">‹</button>
+                <span id="adm-fylbl" style="min-width:40px;text-align:center;font-size:13px;font-weight:600"></span>
+                <button onclick="changeAdmFY(1)">›</button>
+              </div>
+              <select id="adm-bl" onchange="loadAdmHolidays()" style="width:auto;padding:6px 10px">
+                <option value="BW">Baden-Württemberg</option><option value="BY">Bayern</option>
+                <option value="BE">Berlin</option><option value="BB">Brandenburg</option>
+                <option value="HB">Bremen</option><option value="HH">Hamburg</option>
+                <option value="HE">Hessen</option><option value="MV">Mecklenburg-Vorp.</option>
+                <option value="NI">Niedersachsen</option><option value="NW">NRW</option>
+                <option value="RP">Rheinland-Pfalz</option><option value="SL">Saarland</option>
+                <option value="SN">Sachsen</option><option value="ST">Sachsen-Anhalt</option>
+                <option value="SH">Schleswig-Holstein</option><option value="TH" selected>Thüringen</option>
+              </select>
+              <button class="btn btn-sm btn-s" onclick="loadAdmFerienAPI()">📥 API laden</button>
+              <button class="btn btn-sm btn-p" onclick="openAdmHolModal()">+ Eintrag</button>
+            </div>
+          </div>
+          <div id="adm-holidays"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="mo" class="mo hidden" onclick="if(event.target===this)closeModal()">
+  <div class="mb">
+    <div class="mh"><h3 id="mt">-</h3><button class="mc" onclick="closeModal()">✕</button></div>
+    <div class="mbody" id="mbody"></div>
+    <div class="mfoot" id="mfoot"></div>
+  </div>
+</div>
+
+<div id="tc"></div>
+
+<script>
+// ===== STATE =====
+const S = {
+  wo:0, cm:new Date().getMonth(), cy:new Date().getFullYear(),
+  wm:new Date().getMonth(), wy:new Date().getFullYear(),
+  vy:new Date().getFullYear(), fy:new Date().getFullYear(),
+  sts:[], tab:'dash', work_days:'1111100', isAdmin:false
+};
+const MO=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const DF=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+
+function toDate(d){return typeof d==='string'&&d.length===10?new Date(d+'T12:00:00'):new Date(d)}
+function fmt(d){const x=toDate(d);return `${String(x.getDate()).padStart(2,'0')}.${String(x.getMonth()+1).padStart(2,'0')}.${x.getFullYear()}`}
+function iso(d){const x=toDate(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`}
+function wdays(s,e){
+  const wd=S.work_days||'1111100';
+  let c=0,d=new Date(s+'T12:00:00'),en=new Date(e+'T12:00:00');
+  while(d<=en){
+    const dow=d.getDay(),idx=dow===0?6:dow-1;
+    if(wd[idx]==='1')c++;
+    d.setDate(d.getDate()+1);
+  }
+  return c;
+}
+function until(ds){const t=new Date();t.setHours(0,0,0,0);return Math.ceil((new Date(ds)-t)/(864e5))}
+function weekStart(off=0){const t=new Date();const dow=t.getDay();const mo=new Date(t);mo.setDate(t.getDate()+(dow===0?-6:1-dow)+(off*7));mo.setHours(0,0,0,0);return mo}
+
+function toast(msg,type='s'){
+  const el=document.createElement('div');el.className=`toast t${type}`;el.textContent=msg;
+  document.getElementById('tc').appendChild(el);setTimeout(()=>el.remove(),3000);
+}
+
+async function api(url,opts={}){
+  const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'Fehler');return d;
+}
+
+// ===== AUTH =====
+function openLoginScreen(){document.getElementById('ls').classList.remove('hidden')}
+function closeLoginScreen(){document.getElementById('ls').classList.add('hidden')}
+function login(){alert('Anmeldung erfolgt automatisch ueber Home Assistant.');closeLoginScreen()}
+function logout(){alert('Abmeldung erfolgt ueber Home Assistant (nicht ueber diese App).')}
+
+function setLoggedIn(displayName, isAdmin=false){
+  S.isAdmin=isAdmin;
+  document.getElementById('sbu').textContent=displayName;
+  document.getElementById('mobu').textContent=displayName;
+  document.getElementById('btn-logout').style.display='';
+  document.getElementById('btn-login').style.display='none';
+  document.getElementById('app').classList.add('logged-in');
+  if(isAdmin){
+    // Admin: nur Admin-Tab sichtbar, alle User-Tabs ausblenden
+    document.getElementById('app').classList.add('is-admin');
+    document.getElementById('dash-login-hint').style.display='none';
+    // Sidebar nur Admin-Elemente zeigen
+    document.querySelectorAll('.ni.logged-only:not(.admin-only)').forEach(el=>el.style.display='none');
+  } else {
+    document.getElementById('app').classList.remove('is-admin');
+    document.getElementById('dash-login-hint').style.display='none';
+    // Admin-Tab für normale User verstecken
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
+  }
+}
+function setLoggedOut(){
+  document.getElementById('sbu').textContent='';
+  document.getElementById('mobu').textContent='';
+  document.getElementById('btn-logout').style.display='none';
+  document.getElementById('btn-login').style.display='';
+  document.getElementById('dash-login-hint').style.display='';
+  document.getElementById('app').classList.remove('logged-in','is-admin');
+  // Sidebar-Elemente zurücksetzen
+  document.querySelectorAll('.ni.logged-only').forEach(el=>el.style.display='');
+  showTab('dash');
+}
+
+async function checkSession(){
+  try{
+    const d=await api('/api/dp/me');
+    setLoggedIn(d.displayName, d.isAdmin||false);
+    await loadSTs();
+    showTab('cal');
+  }catch{ loadDash(); }
+}
+
+// ===== NAV =====
+const TITLES={dash:'Dashboard',cal:'Dienstplan',work:'Arbeitszeit',vac:'Urlaub',stat:'Statistik',set:'Einstellungen',adm:'Admin'};
+const PRIVATE_TABS=['cal','work','vac','stat','set'];
+function showTab(t){
+  const app=document.getElementById('app');
+  const loggedIn=app.classList.contains('logged-in');
+  const isAdm=app.classList.contains('is-admin');
+  // Admin-Tab: nur für Admins
+  if(t==='adm'&&!isAdm){openLoginScreen();return;}
+  // User-Tabs: nicht für Admins, nicht ohne Login
+  if(PRIVATE_TABS.includes(t)&&!loggedIn){openLoginScreen();return;}
+  if(PRIVATE_TABS.includes(t)&&isAdm) return; // Admin darf keine User-Tabs öffnen
+  document.querySelectorAll('.tc-content').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById(`tab-${t}`).classList.add('active');
+  document.querySelector(`[data-tab="${t}"]`)?.classList.add('active');
+  document.getElementById('mobt').textContent=TITLES[t]||t;
+  document.getElementById('sidebar').classList.remove('open');
+  S.tab=t;
+  if(t==='dash')loadDash();
+  else if(t==='cal')loadCal();
+  else if(t==='work')loadWork();
+  else if(t==='vac')loadVac();
+  else if(t==='stat')loadStat();
+  else if(t==='set')loadSet();
+  else if(t==='adm')loadAdmin();
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+
+// ===== MODAL =====
+function openModal(title,body,foot){
+  document.getElementById('mt').textContent=title;
+  document.getElementById('mbody').innerHTML=body;
+  document.getElementById('mfoot').innerHTML=foot;
+  document.getElementById('mo').classList.remove('hidden');
+}
+function closeModal(){document.getElementById('mo').classList.add('hidden')}
+
+function escAttr(v){
+  return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+let pendingDbSettings=null;
+function readDbSettingsForm(){
+  return {
+    host:document.getElementById('db-host').value.trim(),
+    port:parseInt(document.getElementById('db-port').value,10)||5432,
+    user:document.getElementById('db-user').value.trim(),
+    password:document.getElementById('db-password').value,
+    database:document.getElementById('db-database').value.trim(),
+    sessionSecret:document.getElementById('db-session-secret').value.trim()
+  };
+}
+function markDbSettingsUntested(){
+  const save=document.getElementById('db-save');
+  const msg=document.getElementById('db-msg');
+  if(save)save.disabled=true;
+  if(msg){msg.textContent='';msg.className='msgarea';}
+}
+async function openDbSettingsModal(){
+  try{
+    const d=await api('/api/settings');
+    const c=d.config||{};
+    const body=`
+      <div class="g2">
+        <div class="fg"><label>Host</label><input id="db-host" value="${escAttr(c.host)}"></div>
+        <div class="fg"><label>Port</label><input id="db-port" type="number" min="1" max="65535" value="${escAttr(c.port||5432)}"></div>
+      </div>
+      <div class="g2">
+        <div class="fg"><label>User</label><input id="db-user" value="${escAttr(c.user)}"></div>
+        <div class="fg"><label>Datenbankname</label><input id="db-database" value="${escAttr(c.database)}"></div>
+      </div>
+      <div class="fg"><label>Password</label><input id="db-password" type="password" value="${escAttr(c.password)}"></div>
+      <div class="fg"><label>SESSION_SECRET</label><input id="db-session-secret" value="${escAttr(c.sessionSecret)}"></div>
+      <div id="db-msg" class="msgarea"></div>`;
+    openModal('Datenbankverbindung',body,`
+      <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-s" onclick="testDbSettings()">Verbindung testen</button>
+      <button class="btn btn-p" id="db-save" onclick="confirmDbSettingsSave()" disabled>Speichern</button>`);
+    ['db-host','db-port','db-user','db-password','db-database','db-session-secret'].forEach(id=>document.getElementById(id).addEventListener('input',markDbSettingsUntested));
+  }catch(e){toast(e.message,'e')}
+}
+async function testDbSettings(){
+  const msg=document.getElementById('db-msg');
+  const save=document.getElementById('db-save');
+  msg.className='msgarea';
+  msg.textContent='Verbindung wird getestet...';
+  save.disabled=true;
+  try{
+    await api('/api/settings',{method:'POST',body:JSON.stringify({...readDbSettingsForm(),action:'test'})});
+    msg.className='msgarea ms';
+    msg.textContent='Verbindung erfolgreich getestet.';
+    save.disabled=false;
+  }catch(e){
+    msg.className='msgarea me';
+    msg.textContent=e.message;
+  }
+}
+function confirmDbSettingsSave(){
+  pendingDbSettings=readDbSettingsForm();
+  openModal('Datenbankverbindung ändern',
+    '<p style="color:var(--text2);line-height:1.6">Achtung: Die Datenbankverbindung wird geändert. Alle aktiven Sessions werden beendet und die App verbindet sich neu. Möchtest du wirklich fortfahren?</p>',
+    '<button class="btn btn-s" onclick="closeModal()">Abbrechen</button><button class="btn btn-d" onclick="saveDbSettings()">Ja, ändern</button>');
+}
+async function saveDbSettings(){
+  try{
+    await api('/api/settings',{method:'POST',body:JSON.stringify({...pendingDbSettings,action:'save'})});
+    toast('Datenbankverbindung geändert');
+    setLoggedOut();
+    closeModal();
+    openLoginScreen();
+  }catch(e){toast(e.message,'e')}
+}
+
+// ===== SHIFT TYPES =====
+async function loadSTs(){try{S.sts=await api('/api/dp/shifttypes')}catch{S.sts=[]}}
+function getST(id){return S.sts.find(t=>t.id==id)}
+
+// ===== DASHBOARD =====
+async function loadDash(){
+  const el=document.getElementById('dash-users');
+  el.innerHTML='<div class="empty">Lade...</div>';
+
+  // Wochenstart berechnen (Montag)
+  const base=new Date();
+  base.setDate(base.getDate()+(S.wo*7));
+  const dow=base.getDay();
+  const monday=new Date(base);
+  monday.setDate(base.getDate()-(dow===0?6:dow-1));
+  monday.setHours(0,0,0,0);
+  const ws=iso(monday);
+
+  const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+  const today=iso(new Date());
+
+  // Wochenlabel
+  document.getElementById('wlbl').textContent=
+    `${String(monday.getDate()).padStart(2,'0')}.${String(monday.getMonth()+1).padStart(2,'0')} – `+
+    `${String(sunday.getDate()).padStart(2,'0')}.${String(sunday.getMonth()+1).padStart(2,'0')}.${sunday.getFullYear()}`;
+
+  try{
+    const users=await fetch(`/api/dp/dashboard?week_start=${ws}`).then(r=>r.json());
+    if(!Array.isArray(users)||!users.length){el.innerHTML='<div class="empty">Keine Daten</div>';return;}
+
+    el.innerHTML=users.map(u=>{
+      const nv=u.next_vacation;
+      let vacHtml='<span style="color:var(--text3)">Kein Urlaub geplant</span>';
+      if(nv){
+        const dl=until(nv.start_text);
+        const lbl=dl>0?`in ${dl} Tagen`:dl===0?'Heute!':'läuft';
+        vacHtml=`<span style="color:var(--accent);font-weight:600">${lbl}</span>
+          <span style="color:var(--text2);font-size:12px;margin-left:8px">${fmt(nv.start_text)} – ${fmt(nv.end_text)} · ${wdays(nv.start_text,nv.end_text)} Tage</span>`;
+      }
+
+      // Wochengitter
+      const weekHtml=u.week.map(day=>{
+        const isToday=day.date===today;
+        const d=new Date(day.date);
+        const isWE=d.getDay()===0||d.getDay()===6;
+        const sh=day.shift;
+        const wt=day.work;
+
+        let inner='<span style="font-size:10px;color:var(--text3)">—</span>';
+        if(day.vacation){
+          inner='<span class="wsb" style="background:#34d399;font-size:10px">🌴</span>';
+        } else if(sh?.type_name){
+          const start=wt?.start_time?.slice(0,5)||sh.default_start?.slice(0,5)||'';
+          const end=wt?.end_time?.slice(0,5)||sh.default_end?.slice(0,5)||'';
+          inner=`<span class="wsb" style="background:${sh.color};font-size:10px;padding:1px 5px">${sh.short_name}</span>`;
+          if(start) inner+=`<div style="font-size:9px;color:var(--text2);margin-top:2px">${start}${end?'–'+end:''}</div>`;
+        }
+
+        return `<div style="background:${isToday?'rgba(79,142,247,.12)':'var(--bg3)'};border:1px solid ${isToday?'var(--accent)':'var(--border)'};border-radius:var(--rs);padding:8px 4px;text-align:center;min-height:75px;opacity:${isWE?'.6':'1'}">
+          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">${DD[d.getDay()]}</div>
+          <div style="font-family:var(--fh);font-weight:700;font-size:16px;margin:2px 0">${d.getDate()}</div>
+          ${inner}
+        </div>`;
+      }).join('');
+
+      return `<div class="card" style="margin-bottom:20px">
+        <div class="ch" style="background:var(--bg3)">
+          <h3 style="font-size:17px">👤 ${u.name}</h3>
+          <div style="display:flex;gap:12px;font-size:12px;flex-wrap:wrap">
+            <span style="color:var(--green)">🌴 ${u.vacation.remaining} Tage frei</span>
+            <span style="color:var(--text2)">${vacHtml}</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:14px">
+          ${weekHtml}
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML=`<div class="empty">Fehler: ${e.message}</div>`;}
+}
+function changeWeek(d){S.wo+=d;loadDash()}
+function goWeek(){S.wo=0;loadDash()}
+
+// ===== CALENDAR =====
+async function loadCal(){
+  const y=S.cy,m=S.cm;
+  document.getElementById('mlbl').textContent=`${MO[m]} ${y}`;
+  let shifts=[];try{shifts=await api(`/api/dp/shifts?year=${y}&month=${m+1}`)}catch{}
+  let vacs=[];try{vacs=await api(`/api/dp/vacations?year=${y}`)}catch{}
+  let hols=[];try{hols=await api(`/api/dp/holidays?year=${y}`)}catch{}
+  let wts=[];try{wts=await api(`/api/dp/worktimes?year=${y}&month=${m+1}`)}catch{}
+
+  const sm={};shifts.forEach(s=>{sm[iso(s.date)]=s});
+  const vm={};vacs.forEach(v=>{
+    let d=new Date(v.start_date+'T12:00:00'),e=new Date(v.end_date+'T12:00:00');
+    while(d<=e){if(!vm[iso(d)])vm[iso(d)]=v;d.setDate(d.getDate()+1)}
+  });
+  const hm={};hols.forEach(h=>{
+    let d=new Date(h.start_date+'T12:00:00'),e=new Date(h.end_date+'T12:00:00');
+    while(d<=e){if(!hm[iso(d)])hm[iso(d)]=h;d.setDate(d.getDate()+1)}
+  });
+  const wtm={};wts.forEach(e=>{
+    if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');
+    if(e.work_type&&e.work_type!=='work')wtm[e.date]=e;
+  });
+  const wtCfg={
+    vacation:     {bg:'#34d399',label:'Urlaub',          cls:'vacday'},
+    holiday_comp: {bg:'#a78bfa',label:'Freizeitausgleich',cls:''},
+    sick:         {bg:'#f87171',label:'Krank',            cls:''},
+  };
+
+  const today=iso(new Date());
+  const first=new Date(y,m,1);const last=new Date(y,m+1,0);
+  let sd=first.getDay();sd=sd===0?6:sd-1;
+
+  let html=`<div class="cal-h">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<div class="cal-hd">${d}</div>`).join('')}</div><div class="cal-b">`;
+  for(let i=0;i<sd;i++){const d=new Date(first);d.setDate(d.getDate()-(sd-i));html+=`<div class="cc other"><div class="cdn">${d.getDate()}</div></div>`}
+  for(let day=1;day<=last.getDate();day++){
+    const d=new Date(y,m,day);const ds=iso(d);
+    const isT=ds===today,isW=d.getDay()===0||d.getDay()===6;
+    const sh=sm[ds],vac=vm[ds],hol=hm[ds],wt=wtm[ds];
+    const cfg=wt?wtCfg[wt.work_type]:null;
+    let chips='',extraCls='';
+    if(cfg){
+      chips+=`<span class="csc" style="background:${cfg.bg}">${cfg.label}</span>`;
+      extraCls=cfg.cls;
+    } else if(vac){
+      chips+=`<span class="csc" style="background:#34d399">Urlaub</span>`;
+      extraCls='vacday';
+    } else if(sh?.type_name){
+      chips+=`<span class="csc" style="background:${sh.color}">${sh.short_name}</span>`;
+    }
+    if(hol)chips+=`<div class="chl">${hol.name}</div>`;
+    if(sh?.note&&!cfg)chips+=`<div class="ndot"></div>`;
+    html+=`<div class="cc ${isT?'today':''} ${isW?'weekend':''} ${extraCls} ${hol&&!vac&&!cfg?'holday':''}" onclick="openShiftModal('${ds}')"><div class="cdn">${day}</div>${chips}</div>`;
+  }
+  const rem=(sd+last.getDate())%7;if(rem>0)for(let i=1;i<=7-rem;i++)html+=`<div class="cc other"><div class="cdn">${i}</div></div>`;
+  html+='</div>';
+  document.getElementById('calgrid').innerHTML=html;
+}
+function changeMon(d){S.cm+=d;if(S.cm>11){S.cm=0;S.cy++}if(S.cm<0){S.cm=11;S.cy--}loadCal()}
+function goMon(){S.cm=new Date().getMonth();S.cy=new Date().getFullYear();loadCal()}
+
+// ===== SHIFT MODAL =====
+async function openShiftModal(ds){
+  const date=new Date(ds+'T12:00:00');const dlbl=`${DF[date.getDay()]}, ${fmt(ds)}`;
+  let ex=null;
+  try{const r=await api(`/api/dp/shifts?year=${date.getFullYear()}&month=${date.getMonth()+1}`);ex=r.find(s=>iso(s.date)===ds)}catch{}
+  // Prüfen ob schon ein Arbeitszeit-Eintrag für diesen Tag existiert
+  let exWT=null;
+  try{const r=await api(`/api/dp/worktimes?year=${date.getFullYear()}&month=${date.getMonth()+1}`);
+    r.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
+    exWT=r.find(e=>e.date===ds);}catch{}
+  const opts=S.sts.map(t=>`<option value="${t.id}" ${ex?.shift_type_id==t.id?'selected':''}>${t.name}</option>`).join('');
+  const wtInfo=exWT?`<div style="font-size:11px;color:var(--text2);margin-top:4px">
+    ${exWT.work_type==='vacation'?'🌴 Urlaubstag':exWT.work_type==='holiday_comp'?'🎉 Freizeitausgleich':exWT.work_type==='sick'?'🤒 Kranktag':`⏱️ ${parseFloat(exWT.actual_hours||0).toFixed(1)}h erfasst`}
+    – bereits in Arbeitszeit eingetragen</div>`:'';
+  const body=`
+    <div class="fg"><label>Schichtart</label><select id="mst"><option value="">— Kein Eintrag —</option>${opts}</select></div>
+    <div class="g2">
+      <div class="fg"><label>Tatsächl. Start</label><input type="time" id="mas" value="${ex?.actual_start?.slice(0,5)||''}"></div>
+      <div class="fg"><label>Tatsächl. Ende</label><input type="time" id="mae" value="${ex?.actual_end?.slice(0,5)||''}"></div>
+    </div>
+    <div class="fg"><label>Notiz</label><textarea id="mn" rows="2">${ex?.note||''}</textarea></div>
+    <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Schnelleintrag Arbeitszeit</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)"
+          onclick="quickWT('${ds}','vacation','Urlaubstag')">🌴 Urlaubstag</button>
+        <button class="btn btn-sm" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)"
+          onclick="quickWT('${ds}','holiday_comp','Freizeitausgleich')">🎉 Freizeitausgleich</button>
+        <button class="btn btn-sm" style="background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)"
+          onclick="quickWT('${ds}','sick','Kranktag')">🤒 Krank</button>
+      </div>
+      ${wtInfo}
+    </div>`;
+  const foot=`${ex?`<button class="btn btn-d btn-sm" onclick="delShift(${ex.id})">Löschen</button>`:''}
+    <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveShift('${ds}')">Speichern</button>`;
+  openModal(`📅 ${dlbl}`,body,foot);
+  document.getElementById('mst').addEventListener('change',function(){
+    const t=S.sts.find(t=>t.id==this.value);
+    if(t?.default_start)document.getElementById('mas').value=t.default_start.slice(0,5);
+    if(t?.default_end)document.getElementById('mae').value=t.default_end.slice(0,5);
+  });
+}
+
+async function quickWT(ds, work_type, label){
+  try{
+    // Arbeitszeit eintragen
+    await api('/api/dp/worktimes',{method:'POST',body:JSON.stringify({date:ds,work_type,note:label})});
+    // Bei Urlaub auch in dp_vacations eintragen
+    if(work_type==='vacation'){
+      const y=new Date(ds+'T12:00:00').getFullYear();
+      await api('/api/dp/vacations',{method:'POST',body:JSON.stringify({start_date:ds,end_date:ds,status:'genommen',note:'Spontan',year:y})});
+    }
+    toast(`${label} eingetragen`);
+    openShiftModal(ds);
+  }catch(e){toast(e.message,'e')}
+}
+async function saveShift(ds){
+  const st=document.getElementById('mst').value;
+  const as=document.getElementById('mas').value;
+  const ae=document.getElementById('mae').value;
+  const n=document.getElementById('mn').value;
+  try{
+    await api('/api/dp/shifts',{method:'POST',body:JSON.stringify({date:ds,shift_type_id:st||null,actual_start:as||null,actual_end:ae||null,note:n||null})});
+    closeModal();toast('Schicht gespeichert');
+    if(S.tab==='dash')loadDash();else if(S.tab==='cal')loadCal();
+  }catch(e){toast(e.message,'e')}
+}
+async function delShift(id){
+  if(!confirm('Schicht löschen?'))return;
+  try{await api(`/api/dp/shifts/${id}`,{method:'DELETE'});closeModal();toast('Gelöscht');if(S.tab==='dash')loadDash();else loadCal()}catch(e){toast(e.message,'e')}
+}
+
+// ===== ARBEITSZEIT =====
+function calcHours(start,end,breakMin){
+  if(!start||!end)return 0;
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  return Math.round(((eh*60+em)-(sh*60+sm)-(breakMin||0))/60*100)/100;
+}
+async function loadWork(){
+  const y=S.wy,m=S.wm;
+  document.getElementById('wmlbl').textContent=`${MO[m]} ${y}`;
+  let ents=[];try{ents=await api(`/api/dp/worktimes?year=${y}&month=${m+1}`)}catch{}
+  let tgt={target:0,days:0,hpd:0,weekly_hours:40};
+  try{tgt=await api(`/api/dp/worktimes/target/${y}/${m+1}`)}catch{}
+  ents.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
+  const ta=ents.reduce((s,e)=>s+parseFloat(e.actual_hours||0),0);
+  const urlaubTage=ents.filter(e=>e.work_type==='vacation'||e.is_vacation).length;
+  const krankTage=ents.filter(e=>e.work_type==='sick').length;
+  const freizeitTage=ents.filter(e=>e.work_type==='holiday_comp').length;
+  const arbeitsTage=ents.length-urlaubTage-krankTage-freizeitTage;
+  const diff=ta-tgt.target;
+  const diffColor=diff>=0?'var(--green)':'var(--red)';
+  document.getElementById('wstats').innerHTML=`
+    <div class="sc sb"><div class="sl">Sollstunden</div><div class="sv">${tgt.target.toFixed(1)}</div><div class="ss">${tgt.days} Arbeitstage à ${tgt.hpd.toFixed(2)}h</div></div>
+    <div class="sc sg"><div class="sl">Gesamtstunden</div><div class="sv">${ta.toFixed(1)}</div><div class="ss">diesen Monat</div></div>
+    <div class="sc" style="border-color:${diff>=0?'rgba(52,211,153,.3)':'rgba(248,113,113,.3)'}">
+      <div class="sl">Differenz</div>
+      <div class="sv" style="color:${diffColor}">${diff>=0?'+':''}${diff.toFixed(1)}</div>
+      <div class="ss">${diff>=0?'Überstunden':'Fehlstunden'}</div>
+    </div>
+    <div class="sc sy"><div class="sl">🌴 Urlaub</div><div class="sv">${urlaubTage}</div><div class="ss">Tage</div></div>
+    ${krankTage>0?`<div class="sc sr"><div class="sl">🤒 Krank</div><div class="sv">${krankTage}</div><div class="ss">Tage</div></div>`:''}
+    ${freizeitTage>0?`<div class="sc sp"><div class="sl">🎉 Freizeitausgleich</div><div class="sv">${freizeitTage}</div><div class="ss">Tage</div></div>`:''}
+    <div class="sc"><div class="sl">Ø pro Tag</div><div class="sv">${ents.length>0?(ta/ents.length).toFixed(1):0}</div><div class="ss">Stunden</div></div>`;
+  const entMap={};ents.forEach(e=>entMap[e.date]=e);
+  const firstDay=new Date(y,m,1);
+  const lastDay=new Date(y,m+1,0);
+  const todayStr=iso(new Date());
+  const weeks=[];let week=[];
+  let startDow=firstDay.getDay();startDow=startDow===0?6:startDow-1;
+  for(let i=0;i<startDow;i++) week.push(null);
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(y,m,d);
+    week.push(date);
+    if(date.getDay()===0||d===lastDay.getDate()){
+      while(week.length<7) week.push(null);
+      weeks.push(week);week=[];
+    }
+  }
+  document.getElementById('wtlist').innerHTML=weeks.map(week=>{
+    const wSum=week.filter(Boolean).reduce((s,d)=>{const e=entMap[iso(d)];return s+(e?parseFloat(e.actual_hours||0):0);},0);
+    const wLabel=`KW ${getKW(week.find(Boolean)||firstDay)}`;
+    const cells=week.map(d=>{
+      if(!d) return `<div style="min-height:72px;border-radius:var(--rs)"></div>`;
+      const ds=iso(d);const e=entMap[ds];
+      const isToday=ds===todayStr;const isWE=d.getDay()===0||d.getDay()===6;
+      const ac=e?parseFloat(e.actual_hours||0):null;
+      const wtype=e?.work_type||(e?.is_vacation?'vacation':'work');
+      const is8h=wtype==='vacation'||wtype==='holiday_comp'||wtype==='sick';
+      let inner='';
+      const typeConfig={
+        vacation: {icon:'🌴',label:'Urlaub',   color:'var(--green)',  bg:'rgba(52,211,153,.08)'},
+        holiday_comp:{icon:'🎉',label:'Freizeitausgleich',color:'var(--purple)',bg:'rgba(167,139,250,.08)'},
+        sick:     {icon:'🤒',label:'Krank',    color:'var(--red)',    bg:'rgba(248,113,113,.08)'},
+        work:     {icon:'',   label:'',        color:'var(--accent)', bg:'var(--bg3)'},
+      };
+      const tc=typeConfig[wtype]||typeConfig.work;
+      if(is8h){
+        inner=`<div style="color:${tc.color};font-size:11px">${tc.icon} ${tc.label}</div><div style="color:${tc.color};font-weight:700;font-size:15px">8h</div>`;
+      } else if(e){
+        const st=e.start_time?.slice(0,5)||'',et=e.end_time?.slice(0,5)||'';
+        inner=`${st?`<div style="font-size:10px;color:var(--text2)">${st}${et?'-'+et:''}</div>`:''}
+          <div style="font-weight:700;font-size:15px;color:${tc.color}">${ac.toFixed(1)}h</div>
+          ${e.break_minutes>0?`<div style="font-size:9px;color:var(--text3)">${e.break_minutes}min</div>`:''}`;
+      }
+      const bg=is8h?tc.bg:e?'var(--bg3)':isWE?'rgba(255,255,255,.01)':'var(--bg2)';
+      const bdr=isToday?'var(--accent)':e?'var(--border)':'rgba(42,51,72,.5)';
+      return `<div style="background:${bg};border:1px solid ${bdr};border-radius:var(--rs);padding:8px 6px;min-height:72px;cursor:pointer;position:relative"
+        data-date="${ds}" data-entry-id="${e?.id||''}"
+        onclick="handleWTDayClick(this)">
+        <div style="font-size:11px;font-weight:600;color:${isToday?'var(--accent)':isWE?'var(--text3)':'var(--text2)'}">${DD[d.getDay()]} ${d.getDate()}</div>
+        ${inner}${e?.note?'<div style="font-size:9px;color:var(--yellow);position:absolute;top:4px;right:4px">&#128203;</div>':''}
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 2px">
+        <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">${wLabel}</span>
+        ${wSum>0?`<span style="font-size:12px;color:var(--accent);font-weight:600">${wSum.toFixed(1)}h</span>`:'<span style="font-size:11px;color:var(--text3)">keine Eintraege</span>'}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">${cells}</div>
+    </div>`;
+  }).join('');
+}
+function getKW(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const dn=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dn);const ys=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-ys)/86400000)+1)/7);}
+function openWTModalDate(ds){openWTModal({date:ds});}
+
+async function handleWTDayClick(el){
+  const ds=el.getAttribute('data-date');
+  const eid=el.getAttribute('data-entry-id');
+  if(eid){
+    // Bestehenden Eintrag laden und Modal öffnen
+    const y=ds.slice(0,4),m=parseInt(ds.slice(5,7));
+    let ents=[];try{ents=await api(`/api/dp/worktimes?year=${y}&month=${m}`)}catch{}
+    ents.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
+    const entry=ents.find(e=>e.date===ds);
+    openWTModal(entry||{date:ds});
+  } else {
+    openWTModal({date:ds});
+  }
+}
+function changeWMon(d){S.wm+=d;if(S.wm>11){S.wm=0;S.wy++}if(S.wm<0){S.wm=11;S.wy--}loadWork()}
+function openWTModal(e){
+  const wtype=e?.work_type||(e?.is_vacation?'vacation':'work');
+  const is8h=wtype==='vacation'||wtype==='holiday_comp'||wtype==='sick';
+  const body=`
+    <div class="fg"><label>Datum</label><input type="date" id="wtd" value="${e?iso(e.date):iso(new Date())}"></div>
+    <div class="fg">
+      <label>Typ</label>
+      <select id="wtyp" onchange="toggleWTFields()">
+        <option value="work" ${wtype==='work'?'selected':''}>Arbeitstag</option>
+        <option value="vacation" ${wtype==='vacation'?'selected':''}>🌴 Urlaubstag (8h)</option>
+        <option value="holiday_comp" ${wtype==='holiday_comp'?'selected':''}>🎉 Feiertagsausgleich (8h)</option>
+        <option value="sick" ${wtype==='sick'?'selected':''}>🤒 Krank (8h)</option>
+      </select>
+    </div>
+    <div id="wt-work-fields" style="${is8h?'display:none':''}">
+      <div class="g2">
+        <div class="fg"><label>Von</label><input type="time" id="wts" value="${e?.start_time?.slice(0,5)||''}"></div>
+        <div class="fg"><label>Bis</label><input type="time" id="wte" value="${e?.end_time?.slice(0,5)||''}"></div>
+      </div>
+      <div class="fg"><label>Pause (Minuten)</label><input type="number" id="wtb" min="0" max="120" step="5" value="${e?.break_minutes||0}"></div>
+      <div id="wt-preview" style="font-size:13px;color:var(--accent);font-weight:600;margin-top:-8px;margin-bottom:8px"></div>
+    </div>
+    <div class="fg"><label>Notiz</label><input type="text" id="wtn" value="${e?.note||''}"></div>`;
+  openModal('⏱️ Arbeitszeit erfassen',body,`
+    ${e?.id?`<button class="btn btn-d btn-sm" onclick="delWT(${e.id})">Löschen</button>`:''}
+    <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveWT(${e?.id||'null'})">Speichern</button>`);
+  const upd=()=>{
+    const s=document.getElementById('wts')?.value,en=document.getElementById('wte')?.value,br=parseInt(document.getElementById('wtb')?.value||0);
+    if(s&&en){const h=calcHours(s,en,br);document.getElementById('wt-preview').textContent=h>0?`= ${h.toFixed(2)} Stunden`:'';}
+  };
+  document.getElementById('wts')?.addEventListener('change',upd);
+  document.getElementById('wte')?.addEventListener('change',upd);
+  document.getElementById('wtb')?.addEventListener('input',upd);
+  if(e?.start_time)upd();
+}
+function toggleWTFields(){
+  const t=document.getElementById('wtyp').value;
+  const is8h=t==='vacation'||t==='holiday_comp'||t==='sick';
+  document.getElementById('wt-work-fields').style.display=is8h?'none':'';
+}
+async function saveWT(id){
+  const d=document.getElementById('wtd').value;
+  const wt=document.getElementById('wtyp').value;
+  const is8h=wt==='vacation'||wt==='holiday_comp'||wt==='sick';
+  const s=document.getElementById('wts')?.value;
+  const en=document.getElementById('wte')?.value;
+  const br=parseInt(document.getElementById('wtb')?.value||0);
+  const n=document.getElementById('wtn').value;
+  if(!is8h&&(!s||!en)){toast('Bitte Start- und Endzeit eintragen','e');return}
+  try{
+    await api('/api/dp/worktimes',{method:'POST',body:JSON.stringify({date:d,start_time:s||null,end_time:en||null,break_minutes:br,note:n,work_type:wt})});
+    closeModal();toast('Gespeichert');loadWork();
+  }catch(e){toast(e.message,'e')}
+}
+async function delWT(id){
+  if(!confirm('Eintrag löschen?'))return;
+  try{await api(`/api/dp/worktimes/${id}`,{method:'DELETE'});toast('Gelöscht');loadWork()}catch(e){toast(e.message,'e')}
+}
+
+// ===== URLAUB =====
+async function loadVac(){
+  document.getElementById('vylbl').textContent=S.vy;
+  let vacs=[];try{vacs=await api(`/api/dp/vacations?year=${S.vy}`)}catch{}
+  let vi={budget:30,used:0,remaining:30};try{vi=await api(`/api/dp/vacations/remaining/${S.vy}`);if(vi.work_days)S.work_days=vi.work_days;}catch{}
+  let hols=[];try{hols=await api(`/api/dp/holidays?year=${S.vy}`)}catch{}
+
+  document.getElementById('vstats').innerHTML=`
+    <div class="sc sg"><div class="sl">Resturlaub</div><div class="sv">${vi.remaining}</div><div class="ss">frei (ohne geplant/genehmigt)</div></div>
+    <div class="sc sb"><div class="sl">Verbraucht</div><div class="sv">${vi.used}</div><div class="ss">genommen ${S.vy}</div></div>
+    <div class="sc sy"><div class="sl">Geplant</div><div class="sv">${vi.planned||0}</div><div class="ss">noch nicht genommen</div></div>
+    <div class="sc sp"><div class="sl">Genehmigt</div><div class="sv">${vi.approved||0}</div><div class="ss">noch nicht genommen</div></div>`
+    + `<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+    <button class="btn btn-s btn-sm" onclick="doCarryover(${S.vy-1},${S.vy})">
+      🔄 Resturlaub ${S.vy-1} → ${S.vy} berechnen
+    </button>
+    <button class="btn btn-s btn-sm" onclick="openCarryoverModal(${vi.carryover||0})">
+      ✏️ Übertrag manuell setzen
+    </button>
+    ${vi.carryover>0?`<span style="font-size:12px;color:var(--green)">✓ ${vi.carryover} Tage Übertrag aktiv</span>`:'<span style="font-size:12px;color:var(--text3)">Kein Übertrag eingetragen</span>'}
+  </div>`;
+
+  if(!vacs.length){document.getElementById('vaclist').innerHTML='<div class="empty">Kein Urlaub für dieses Jahr geplant</div>';}
+  else document.getElementById('vaclist').innerHTML=vacs.sort((a,b)=>new Date(a.start_date)-new Date(b.start_date)).map(v=>{
+    const statuses=[
+      {key:'geplant',   label:'Geplant',    cls:'b-geplant'},
+      {key:'genehmigt', label:'Genehmigt',  cls:'b-genehmigt'},
+      {key:'genommen',  label:'Genommen',   cls:'b-genommen'},
+      {key:'abgelehnt', label:'Abgelehnt',  cls:'b-abgelehnt'},
+    ];
+    const btns=statuses.map(st=>`
+      <button onclick="setVacStatus(${v.id},'${st.key}')"
+        style="padding:3px 10px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:var(--fb);
+          ${v.status===st.key
+            ? st.key==='geplant'   ? 'background:rgba(251,191,36,.3);color:var(--yellow)'
+            : st.key==='genehmigt' ? 'background:rgba(52,211,153,.3);color:var(--green)'
+            : st.key==='genommen'  ? 'background:rgba(79,142,247,.3);color:var(--accent)'
+            :                        'background:rgba(248,113,113,.3);color:var(--red)'
+            : 'background:var(--bg4);color:var(--text3)'}">
+        ${st.label}
+      </button>`).join('');
+    return `<div class="li" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <div style="display:flex;align-items:center;width:100%;gap:10px">
+        <div class="lmain">
+          <div class="lname">${fmt(v.start_date)} – ${fmt(v.end_date)}</div>
+          <div class="lsub">${wdays(v.start_date,v.end_date)} Tage${v.note?' · '+v.note:''}</div>
+        </div>
+        <div class="lact" style="opacity:1">
+          <button class="bico" onclick='openVacModal(${JSON.stringify(v)})'>✏️</button>
+          <button class="bico" onclick="delVac(${v.id})">🗑️</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${btns}</div>
+    </div>`;
+  }).join('');
+
+  // Ferien & Feiertage im Urlaub-Tab anzeigen
+  document.getElementById('vac-fer-year').textContent=S.vy;
+  if(!hols.length){
+    document.getElementById('vac-fer-list').innerHTML='<div class="empty">Keine Ferien/Feiertage eingetragen – im Admin-Bereich laden</div>';
+  } else {
+    const ferienItems=hols.filter(h=>h.type==='ferien').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+    const feiertageItems=hols.filter(h=>h.type==='feiertag').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+    const renderHolRow=h=>{
+      const isFerien=h.type==='ferien';
+      const clash=vacs.some(v=>new Date(v.start_date)<=new Date(h.end_date)&&new Date(v.end_date)>=new Date(h.start_date));
+      return `<div class="li" style="${clash?'background:rgba(251,191,36,.06)':''}">
+        <div style="font-size:18px;width:24px;text-align:center">${isFerien?'🏖️':'🎉'}</div>
+        <div class="lmain">
+          <div class="lname">${h.name}${clash?' <span style="color:var(--yellow);font-size:11px">● Überschneidung</span>':''}</div>
+          <div class="lsub">${fmt(h.start_date)}${h.start_date!==h.end_date?' – '+fmt(h.end_date):''} · ${h.bundesland||'Alle'}</div>
+        </div>
+        <span class="badge" style="background:${isFerien?'rgba(79,142,247,.15)':'rgba(52,211,153,.15)'};color:${isFerien?'var(--accent)':'var(--green)'}">${isFerien?'Ferien':'Feiertag'}</span>
+      </div>`;
+    };
+    const vacCollapsible=(id,icon,label,count,content)=>`
+      <div style="border-bottom:1px solid var(--border)">
+        <button onclick="toggleSection('${id}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:none;border:none;color:var(--text);cursor:pointer;font-family:var(--fb);font-size:14px">
+          <span>${icon} ${label} <span style="color:var(--text3);font-size:12px">(${count})</span></span>
+          <span id="${id}-arrow" style="transition:transform .2s">▾</span>
+        </button>
+        <div id="${id}" style="display:none">${content||'<div class="empty">Keine Einträge</div>'}</div>
+      </div>`;
+    document.getElementById('vac-fer-list').innerHTML=
+      vacCollapsible('vac-ferien','🏖️','Schulferien',ferienItems.length,ferienItems.map(renderHolRow).join(''))+
+      vacCollapsible('vac-ftage','🎉','Feiertage',feiertageItems.length,feiertageItems.map(renderHolRow).join(''));
+  }
+}
+function changeVY(d){S.vy+=d;loadVac()}
+async function doCarryover(from_year,to_year){
+  if(!confirm(`Resturlaub ${from_year} berechnen und als Übertrag in ${to_year} eintragen?`))return;
+  try{
+    const r=await api('/api/dp/vacations/carryover',{method:'POST',body:JSON.stringify({from_year,to_year})});
+    toast(`${r.carried} Tage aus ${from_year} übertragen`);
+    loadVac();
+  }catch(e){toast(e.message,'e')}
+}
+function openCarryoverModal(current){
+  openModal('✏️ Übertrag manuell setzen',
+    `<div class="fg"><label>Übertragene Tage aus Vorjahr</label>
+     <input type="number" id="co-val" min="0" max="365" value="${current}">
+     </div>
+     <p style="font-size:12px;color:var(--text2);margin-top:8px">0 eingeben um den Übertrag zurückzusetzen.</p>`,
+    `<button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
+     <button class="btn btn-p" onclick="saveCarryover()">Speichern</button>`
+  );
+}
+async function saveCarryover(){
+  const val=parseInt(document.getElementById('co-val').value)||0;
+  try{
+    await api('/api/dp/settings',{method:'PUT',body:JSON.stringify({vacation_carryover:val,carryover_year:S.vy})});
+    closeModal();toast(val===0?'Übertrag zurückgesetzt':`Übertrag auf ${val} Tage gesetzt`);
+    loadVac();
+  }catch(e){toast(e.message,'e')}
+}
+async function openVacModal(e){
+  const sOpts=['geplant','genehmigt','genommen','abgelehnt'].map(s=>`<option value="${s}" ${e?.status===s?'selected':''}>${s}</option>`).join('');
+  // Andere User laden für "Auch für"-Feld (nur bei Neuanlage)
+  let otherUsersHtml='';
+  if(!e){
+    try{
+      const others=await api('/api/dp/other-users');
+      if(others.length){
+        otherUsersHtml=`<div class="fg">
+          <label>Auch für</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+            ${others.map(u=>`
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;font-size:13px">
+                <input type="checkbox" id="also-${u.id}" value="${u.id}" style="width:auto;accent-color:var(--accent)">
+                👤 ${u.display_name}
+              </label>`).join('')}
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Urlaub wird für alle ausgewählten Personen gleichzeitig eingetragen</div>
+        </div>`;
+      }
+    }catch{}
+  }
+  const body=`
+    <div class="g2">
+      <div class="fg"><label>Von</label><input type="date" id="vs" value="${e?iso(e.start_date):''}"></div>
+      <div class="fg"><label>Bis</label><input type="date" id="ve" value="${e?iso(e.end_date):''}"></div>
+    </div>
+    <div class="fg"><label>Status</label><select id="vst">${sOpts}</select></div>
+    <div class="fg"><label>Notiz</label><input type="text" id="vn" value="${e?.note||''}"></div>
+    ${otherUsersHtml}
+    <div id="vp" style="font-size:12px;color:var(--accent);font-weight:600;margin-top:4px"></div>`;
+  openModal('🌴 Urlaub planen',body,`
+    <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveVac(${e?.id||'null'})">Speichern</button>`);
+  const upd=()=>{const s=document.getElementById('vs').value,en=document.getElementById('ve').value;if(s&&en&&new Date(s)<=new Date(en))document.getElementById('vp').textContent=wdays(s,en)+' Tage'};
+  document.getElementById('vs').addEventListener('change',upd);document.getElementById('ve').addEventListener('change',upd);if(e)upd();
+}
+async function saveVac(id){
+  const s=document.getElementById('vs').value,e=document.getElementById('ve').value;
+  const st=document.getElementById('vst').value,n=document.getElementById('vn').value;
+  if(!s||!e){toast('Bitte Datum ausfüllen','e');return}
+  if(new Date(s)>new Date(e)){toast('Startdatum muss vor Enddatum liegen','e');return}
+  const y=new Date(s).getFullYear();
+  // Welche anderen User ausgewählt?
+  const also=[];
+  document.querySelectorAll('[id^="also-"]:checked').forEach(cb=>also.push(parseInt(cb.value)));
+  try{
+    if(id){
+      await api(`/api/dp/vacations/${id}`,{method:'PUT',body:JSON.stringify({start_date:s,end_date:e,status:st,note:n,year:y})});
+    }else{
+      await api('/api/dp/vacations',{method:'POST',body:JSON.stringify({start_date:s,end_date:e,status:st,note:n,year:y,also_for_users:also})});
+    }
+    closeModal();
+    if(also.length) toast(`Urlaub für ${also.length+1} Personen gespeichert`);
+    else toast('Urlaub gespeichert');
+    loadVac();
+  }catch(err){toast(err.message,'e')}
+}
+async function setVacStatus(id, status){
+  try{
+    await api(`/api/dp/vacations/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});
+    if(status==='genommen') toast('Status gesetzt · Arbeitszeit automatisch eingetragen 📋');
+    else toast(`Status: ${status}`);
+    loadVac();
+  }catch(e){toast(e.message,'e')}
+}
+async function delVac(id){
+  if(!confirm('Urlaub löschen?'))return;
+  try{await api(`/api/dp/vacations/${id}`,{method:'DELETE'});toast('Gelöscht');loadVac()}catch(e){toast(e.message,'e')}
+}
+
+// ===== FERIEN =====
+async function loadFer(){
+  document.getElementById('fylbl').textContent=S.fy;
+  let items=[];try{items=await api(`/api/dp/holidays?year=${S.fy}`)}catch{}
+  const ferien=items.filter(h=>h.type==='ferien').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+  const ftage=items.filter(h=>h.type==='feiertag').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+  const rl=list=>!list.length?'<div class="empty">Keine Einträge</div>':list.map(h=>`
+    <div class="li"><div class="ldate">${fmt(h.start_date)}</div>
+    <div class="lmain"><div class="lname">${h.name}</div><div class="lsub">${fmt(h.start_date)}${h.start_date!==h.end_date?' – '+fmt(h.end_date):''} · ${h.bundesland||'Alle'}</div></div>
+    <div class="lact"><button class="bico" onclick="delHol(${h.id})">🗑️</button></div></div>`).join('');
+  const collapsible=(id,icon,label,count,content)=>`
+    <div style="border-bottom:1px solid var(--border)">
+      <button onclick="toggleSection('${id}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:none;border:none;color:var(--text);cursor:pointer;font-family:var(--fb);font-size:14px">
+        <span>${icon} ${label} <span style="color:var(--text3);font-size:12px">(${count})</span></span>
+        <span id="${id}-arrow" style="transition:transform .2s">▾</span>
+      </button>
+      <div id="${id}" style="display:none">${content}</div>
+    </div>`;
+  document.getElementById('ferlist').innerHTML=
+    collapsible('fer-ferien','🏖️','Schulferien',ferien.length,rl(ferien))+
+    collapsible('fer-ftage','🎉','Feiertage',ftage.length,rl(ftage));
+}
+function toggleSection(id){
+  const el=document.getElementById(id);
+  const arrow=document.getElementById(id+'-arrow');
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(180deg)':'';
+}
+function changeFY(d){S.fy+=d;loadFer()}
+function openHolModal(){
+  const body=`
+    <div class="fg"><label>Name</label><input type="text" id="hn" placeholder="z.B. Osterferien"></div>
+    <div class="g2">
+      <div class="fg"><label>Von</label><input type="date" id="hs"></div>
+      <div class="fg"><label>Bis</label><input type="date" id="he"></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label>Typ</label><select id="ht"><option value="ferien">Schulferien</option><option value="feiertag">Feiertag</option></select></div>
+      <div class="fg"><label>Bundesland</label><input type="text" id="hbl" value="BY" placeholder="z.B. BY"></div>
+    </div>`;
+  openModal('📅 Ferien/Feiertag',body,`<button class="btn btn-s" onclick="closeModal()">Abbrechen</button><button class="btn btn-p" onclick="saveHol()">Speichern</button>`);
+}
+async function saveHol(){
+  const n=document.getElementById('hn').value,s=document.getElementById('hs').value,e=document.getElementById('he').value,t=document.getElementById('ht').value,bl=document.getElementById('hbl').value;
+  if(!n||!s||!e){toast('Bitte alle Felder ausfüllen','e');return}
+  try{await api('/api/dp/holidays',{method:'POST',body:JSON.stringify({name:n,start_date:s,end_date:e,type:t,bundesland:bl,year:new Date(s).getFullYear()})});closeModal();toast('Gespeichert');loadFer()}catch(err){toast(err.message,'e')}
+}
+async function delHol(id){
+  if(!confirm('Eintrag löschen?'))return;
+  try{await api(`/api/dp/holidays/${id}`,{method:'DELETE'});toast('Gelöscht');loadFer()}catch(e){toast(e.message,'e')}
+}
+async function loadFerienAPI(){
+  try{
+    const set=await api('/api/dp/settings');const bl=set.bundesland||'BY';
+    toast('Lade Ferien...');
+    const r=await fetch(`/api/dp/ferien-proxy?bundesland=${bl}&year=${S.fy}`);
+    if(!r.ok)throw new Error('API nicht erreichbar');
+    const data=await r.json();
+    for(const f of data)await api('/api/dp/holidays',{method:'POST',body:JSON.stringify({name:f.name,start_date:f.start.slice(0,10),end_date:f.end.slice(0,10),type:'ferien',bundesland:bl,year:S.fy})});
+    toast(`${data.length} Ferieneinträge geladen`);loadFer();
+  }catch(e){toast('API-Fehler: '+e.message,'e')}
+}
+
+// ===== EINSTELLUNGEN =====
+async function loadSet(){
+  try{
+    const s=await api('/api/dp/settings');
+    document.getElementById('sdn').value=s.display_name||'';
+    document.getElementById('sbud').value=s.vacation_budget||30;
+    document.getElementById('swh').value=s.weekly_hours||40;
+    document.getElementById('sbl').value=s.bundesland||'BY';
+    const wd=s.work_days||'1111100';
+    S.work_days=wd;
+    for(let i=0;i<7;i++){
+      const cb=document.getElementById(`wd-${i}`);
+      if(cb) cb.checked=wd[i]==='1';
+    }
+  }catch{}
+  await loadSTs();renderSTs();
+}
+function renderSTs(){
+  const el=document.getElementById('stlist');
+  if(!S.sts.length){el.innerHTML='<div class="empty">Noch keine Schichtarten</div>';return}
+  el.innerHTML=S.sts.map(t=>`<div class="li">
+    <div class="cdot" style="background:${t.color}"></div>
+    <div class="lmain"><div class="lname">${t.name} <span style="color:var(--text2);font-size:12px">(${t.short_name})</span></div>
+    <div class="lsub">${t.default_start?t.default_start.slice(0,5)+'–'+(t.default_end?.slice(0,5)||''):'Keine Standardzeit'} · ${t.counts_as_work?'Arbeitszeit':'Freizeit'}</div></div>
+    <div class="lact">
+      <button class="bico" onclick='openSTModal(${JSON.stringify(t)})'>✏️</button>
+      <button class="bico" onclick="delST(${t.id})">🗑️</button>
+    </div></div>`).join('');
+}
+async function saveSettings(){
+  const dn=document.getElementById('sdn').value;
+  const bud=document.getElementById('sbud').value;
+  const bl=document.getElementById('sbl').value;
+  const wh=parseFloat(document.getElementById('swh').value)||40;
+  const wd=Array.from({length:7},(_,i)=>document.getElementById(`wd-${i}`)?.checked?'1':'0').join('');
+  try{
+    await api('/api/dp/settings',{method:'PUT',body:JSON.stringify({display_name:dn,vacation_budget:bud,bundesland:bl,work_days:wd,weekly_hours:wh})});
+    document.getElementById('sbu').textContent=dn;
+    document.getElementById('mobu').textContent=dn;
+    S.work_days=wd;
+    toast('Gespeichert');
+  }catch(e){toast(e.message,'e')}
+}
+function openSTModal(e){
+  const body=`
+    <div class="g2" style="align-items:end">
+      <div class="fg" style="margin-bottom:0"><label>Name</label><input type="text" id="stn" value="${e?.name||''}" placeholder="z.B. Frühschicht"></div>
+      <div class="fg" style="margin-bottom:0"><label>Kürzel</label><input type="text" id="stk" value="${e?.short_name||''}" maxlength="4" placeholder="FS" style="width:70px"></div>
+    </div>
+    <div class="fg" style="margin-top:12px"><label>Farbe</label><input type="color" id="stc" value="${e?.color||'#4f8ef7'}"></div>
+    <div class="g2">
+      <div class="fg"><label>Standard Start</label><input type="time" id="sts" value="${e?.default_start?.slice(0,5)||''}"></div>
+      <div class="fg"><label>Standard Ende</label><input type="time" id="ste" value="${e?.default_end?.slice(0,5)||''}"></div>
+    </div>
+    <div class="fg"><label>Zählt als Arbeitszeit?</label><select id="stw"><option value="true" ${e?.counts_as_work!==false?'selected':''}>Ja</option><option value="false" ${e?.counts_as_work===false?'selected':''}>Nein</option></select></div>`;
+  openModal(e?'✏️ Schichtart bearbeiten':'➕ Schichtart erstellen',body,`<button class="btn btn-s" onclick="closeModal()">Abbrechen</button><button class="btn btn-p" onclick="saveST(${e?.id||'null'})">Speichern</button>`);
+}
+async function saveST(id){
+  const n=document.getElementById('stn').value,k=document.getElementById('stk').value,c=document.getElementById('stc').value,s=document.getElementById('sts').value,e=document.getElementById('ste').value,w=document.getElementById('stw').value==='true';
+  if(!n||!k){toast('Name und Kürzel sind Pflicht','e');return}
+  try{
+    const m=id?'PUT':'POST',u=id?`/api/dp/shifttypes/${id}`:'/api/dp/shifttypes';
+    await api(u,{method:m,body:JSON.stringify({name:n,short_name:k,color:c,default_start:s||null,default_end:e||null,counts_as_work:w})});
+    closeModal();toast('Schichtart gespeichert');await loadSTs();renderSTs();
+  }catch(e){toast(e.message,'e')}
+}
+async function delST(id){
+  if(!confirm('Schichtart löschen?'))return;
+  try{await api(`/api/dp/shifttypes/${id}`,{method:'DELETE'});toast('Gelöscht');await loadSTs();renderSTs()}catch(e){toast(e.message,'e')}
+}
+
+// ===== STATISTIK =====
+const STAT={y:new Date().getFullYear()};
+function changeStatY(d){STAT.y+=d;loadStat();}
+
+async function loadStat(){
+  document.getElementById('stat-ylbl').textContent=STAT.y;
+  const el=document.getElementById('stat-content');
+  el.innerHTML='<div class="empty">Lade...</div>';
+  let s;
+  try{s=await api(`/api/dp/stats/${STAT.y}`)}catch(e){el.innerHTML=`<div class="empty">Fehler: ${e.message}</div>`;return;}
+
+  const MOS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const isCurrentYear=STAT.y===new Date().getFullYear();
+  const cutoffMonth=isCurrentYear?new Date().getMonth():11;
+  const diffColor=s.diff>=0?'var(--green)':'var(--red)';
+
+  // Jahres-Übersicht Stats
+  const statsHtml=`
+    <div class="stats" style="margin-bottom:20px">
+      <div class="sc sb"><div class="sl">Sollstunden</div><div class="sv">${s.target_hours.toFixed(1)}</div><div class="ss">${s.target_days} Arbeitstage</div></div>
+      <div class="sc sg"><div class="sl">Iststunden</div><div class="sv">${s.actual_hours.toFixed(1)}</div><div class="ss">eingetragen</div></div>
+      <div class="sc" style="border-color:${s.diff>=0?'rgba(52,211,153,.3)':'rgba(248,113,113,.3)'}">
+        <div class="sl">Differenz</div>
+        <div class="sv" style="color:${diffColor}">${s.diff>=0?'+':''}${s.diff.toFixed(1)}</div>
+        <div class="ss">${s.diff>=0?'Überstunden':'Fehlstunden'}</div>
+      </div>
+      <div class="sc sy"><div class="sl">🌴 Urlaub genommen</div><div class="sv">${s.vacation.genommen}</div><div class="ss">von ${s.vacation.budget} Tagen</div></div>
+      <div class="sc"><div class="sl">🌴 Urlaub geplant</div><div class="sv">${s.vacation.geplant+s.vacation.genehmigt}</div><div class="ss">noch nicht genommen</div></div>
+      <div class="sc sg"><div class="sl">🌴 Resturlaub</div><div class="sv">${s.vacation.remaining}</div><div class="ss">frei verfügbar</div></div>
+      ${s.sick_days>0?`<div class="sc sr"><div class="sl">🤒 Krank</div><div class="sv">${s.sick_days}</div><div class="ss">Tage</div></div>`:''}
+      ${s.holiday_comp_days>0?`<div class="sc sp"><div class="sl">🎉 Freizeitausgleich</div><div class="sv">${s.holiday_comp_days}</div><div class="ss">Tage</div></div>`:''}
+    </div>`;
+
+  // Monatsbalken
+  const maxVal=Math.max(...s.months.map(m=>Math.max(m.actual,m.target)),1);
+  const monthRows=s.months.map((m,i)=>{
+    if(i>cutoffMonth) return ''; // Zukunftsmonate nicht anzeigen
+    const actPct=Math.round(m.actual/maxVal*100);
+    const tgtPct=Math.round(m.target/maxVal*100);
+    const diff=Math.round((m.actual-m.target)*100)/100;
+    const diffColor=diff>=0?'var(--green)':'var(--red)';
+    const isCurrentMonth=isCurrentYear&&i===new Date().getMonth();
+    return `
+      <div style="display:grid;grid-template-columns:40px 1fr 80px 80px 80px;gap:12px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--border);${isCurrentMonth?'background:rgba(79,142,247,.05)':''}">
+        <div style="font-size:13px;font-weight:600;color:${isCurrentMonth?'var(--accent)':'var(--text2)'}">${MOS[i]}</div>
+        <div>
+          <div style="position:relative;height:8px;background:var(--bg4);border-radius:4px;margin-bottom:4px">
+            <div style="position:absolute;height:100%;width:${tgtPct}%;background:var(--border);border-radius:4px"></div>
+            <div style="position:absolute;height:100%;width:${actPct}%;background:${diff>=0?'var(--green)':'var(--red)'};border-radius:4px;opacity:.8"></div>
+          </div>
+          <div style="display:flex;gap:8px;font-size:10px;color:var(--text3)">
+            ${m.vacation>0?`<span>🌴${m.vacation}d</span>`:''}
+            ${m.sick>0?`<span>🤒${m.sick}d</span>`:''}
+            ${m.holiday_comp>0?`<span>🎉${m.holiday_comp}d</span>`:''}
+          </div>
+        </div>
+        <div style="text-align:right;font-size:13px;color:var(--text2)">${m.target.toFixed(1)}h</div>
+        <div style="text-align:right;font-size:13px;font-weight:600">${m.actual.toFixed(1)}h</div>
+        <div style="text-align:right;font-size:13px;font-weight:600;color:${diffColor}">${diff>=0?'+':''}${diff.toFixed(1)}h</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML=statsHtml+`
+    <div class="card">
+      <div class="ch">
+        <h3>Monatsübersicht ${STAT.y}</h3>
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--text3)">
+          <span>■ Soll</span>
+          <span style="color:var(--green)">■</span><span>/</span><span style="color:var(--red)">■</span><span>Ist</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:40px 1fr 80px 80px 80px;gap:12px;padding:8px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text3)">Monat</div>
+        <div style="font-size:11px;color:var(--text3)">Verlauf</div>
+        <div style="text-align:right;font-size:11px;color:var(--text3)">Soll</div>
+        <div style="text-align:right;font-size:11px;color:var(--text3)">Ist</div>
+        <div style="text-align:right;font-size:11px;color:var(--text3)">+/-</div>
+      </div>
+      ${monthRows}
+    </div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;padding:12px">
+      ${isCurrentYear?`Daten bis heute (${fmt(s.cutoff)}) · ${STAT.y} noch nicht abgeschlossen`:`Vollständiges Jahr ${STAT.y}`}
+    </div>`;
+}
+
+// ===== ADMIN =====
+const S_ADM={fy:new Date().getFullYear()};
+function changeAdmFY(d){S_ADM.fy+=d;loadAdmin();}
+
+async function loadAdmin(){
+  document.getElementById('adm-fylbl').textContent=S_ADM.fy;
+  await loadAdmUsers();
+  await loadAdmHolidays();
+}
+
+// --- USER VERWALTUNG ---
+async function loadAdmUsers(){
+  let users=[];try{users=await api('/api/dp/admin/users')}catch(e){document.getElementById('adm-users').innerHTML=`<div class="empty">${e.message}</div>`;return;}
+  const BL={BW:'Baden-W.',BY:'Bayern',BE:'Berlin',BB:'Brandenburg',HB:'Bremen',HH:'Hamburg',HE:'Hessen',MV:'Meckl.-Vorp.',NI:'Niedersachs.',NW:'NRW',RP:'Rheinl.-Pfalz',SL:'Saarland',SN:'Sachsen',ST:'Sachsen-Anh.',SH:'Schlesw.-Holst.',TH:'Thüringen'};
+  document.getElementById('adm-users').innerHTML=users.map(u=>`
+    <div class="li">
+      <div style="font-size:22px;margin-right:4px">${u.is_admin?'🛡️':'👤'}</div>
+      <div class="lmain">
+        <div class="lname">${u.display_name} <span style="color:var(--text3);font-size:12px">@${u.username}</span>
+          ${u.is_admin?'<span class="badge b-genehmigt" style="margin-left:6px">Admin</span>':''}
+        </div>
+        <div class="lsub">${u.vacation_budget} Tage Urlaub · ${BL[u.bundesland]||u.bundesland} · Arbeitstage: ${(u.work_days||'1111100').split('').map((b,i)=>b==='1'?['Mo','Di','Mi','Do','Fr','Sa','So'][i]:'').filter(Boolean).join('/')}</div>
+      </div>
+      <div class="lact" style="opacity:1">
+        <button class="bico" onclick='openUserModal(${JSON.stringify(u)})'>✏️</button>
+        <button class="bico" onclick="delAdmUser(${u.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function openUserModal(u){
+  const isNew=!u;
+  const wdChecks=['Mo','Di','Mi','Do','Fr','Sa','So'].map((d,i)=>`
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:4px 8px;font-size:12px">
+      <input type="checkbox" id="uwd-${i}" style="width:auto;accent-color:var(--accent)" ${(u?.work_days||'1111100')[i]==='1'?'checked':''}>${d}
+    </label>`).join('');
+  const blOptions=['BW','BY','BE','BB','HB','HH','HE','MV','NI','NW','RP','SL','SN','ST','SH','TH'].map(b=>`<option value="${b}" ${(u?.bundesland||'TH')===b?'selected':''}>${b}</option>`).join('');
+  const body=`
+    ${isNew?`<div class="fg"><label>Benutzername</label><input type="text" id="u-username" placeholder="z.B. max"></div>`:''}
+    <div class="fg"><label>Anzeigename</label><input type="text" id="u-dn" value="${u?.display_name||''}"></div>
+    <div class="fg"><label>Passwort ${isNew?'':'(leer lassen = unverändert)'}</label><input type="password" id="u-pw" placeholder="${isNew?'Passwort':'Neues Passwort (optional)'}"></div>
+    <div class="g2">
+      <div class="fg"><label>Urlaubstage/Jahr</label><input type="number" id="u-bud" min="0" max="60" value="${u?.vacation_budget||30}"></div>
+      <div class="fg"><label>Bundesland</label><select id="u-bl">${blOptions}</select></div>
+    </div>
+    <div class="fg"><label>Arbeitstage</label><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${wdChecks}</div></div>
+    <div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" id="u-admin" style="width:auto;accent-color:var(--accent)" ${u?.is_admin?'checked':''}>
+      Admin-Rechte
+    </label></div>`;
+  openModal(isNew?'➕ Neuer Benutzer':'✏️ Benutzer bearbeiten',body,`
+    <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
+    <button class="btn btn-p" onclick="saveAdmUser(${u?.id||'null'})">Speichern</button>`);
+}
+
+async function saveAdmUser(id){
+  const dn=document.getElementById('u-dn').value;
+  const pw=document.getElementById('u-pw').value;
+  const bud=document.getElementById('u-bud').value;
+  const bl=document.getElementById('u-bl').value;
+  const wd=Array.from({length:7},(_,i)=>document.getElementById(`uwd-${i}`)?.checked?'1':'0').join('');
+  const isAdm=document.getElementById('u-admin').checked;
+  if(!dn){toast('Anzeigename erforderlich','e');return;}
+  try{
+    if(id){
+      await api(`/api/dp/admin/users/${id}`,{method:'PUT',body:JSON.stringify({display_name:dn,vacation_budget:parseInt(bud),bundesland:bl,work_days:wd,is_admin:isAdm,password:pw||undefined})});
+      toast('Benutzer aktualisiert');
+    } else {
+      const un=document.getElementById('u-username').value;
+      if(!un){toast('Benutzername erforderlich','e');return;}
+      if(!pw){toast('Passwort erforderlich','e');return;}
+      await api('/api/dp/admin/users',{method:'POST',body:JSON.stringify({username:un,display_name:dn,password:pw,vacation_budget:parseInt(bud),bundesland:bl,work_days:wd,is_admin:isAdm})});
+      toast('Benutzer angelegt');
+    }
+    closeModal();loadAdmUsers();
+  }catch(e){toast(e.message,'e');}
+}
+
+async function delAdmUser(id){
+  if(!confirm('Benutzer wirklich löschen? Alle Daten werden entfernt.'))return;
+  try{await api(`/api/dp/admin/users/${id}`,{method:'DELETE'});toast('Benutzer gelöscht');loadAdmUsers();}catch(e){toast(e.message,'e');}
+}
+
+// --- FERIEN VERWALTUNG ---
+async function loadAdmHolidays(){
+  const bl=document.getElementById('adm-bl')?.value||'TH';
+  let hols=[];
+  try{hols=await api(`/api/dp/admin/holidays?year=${S_ADM.fy}&bl=${bl}`)}catch(e){document.getElementById('adm-holidays').innerHTML=`<div class="empty">${e.message}</div>`;return;}
+  const ferien=hols.filter(h=>h.type==='ferien').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+  const ftage=hols.filter(h=>h.type==='feiertag').sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+  const row=h=>`<div class="li">
+    <div style="font-size:16px;width:24px">${h.type==='ferien'?'🏖️':'🎉'}</div>
+    <div class="lmain"><div class="lname">${h.name}</div>
+    <div class="lsub">${fmt(h.start_date)}${h.start_date!==h.end_date?' – '+fmt(h.end_date):''} · ${h.bundesland||'Alle'}</div></div>
+    <div class="lact" style="opacity:1"><button class="bico" onclick="delAdmHoliday(${h.id})">🗑️</button></div>
+  </div>`;
+  document.getElementById('adm-holidays').innerHTML=`
+    <div style="border-bottom:1px solid var(--border)"><div class="fs-title">🏖️ Schulferien (${ferien.length})</div>${ferien.length?ferien.map(row).join(''):'<div class="empty">Keine Einträge</div>'}</div>
+    <div><div class="fs-title">🎉 Feiertage (${ftage.length})</div>${ftage.length?ftage.map(row).join(''):'<div class="empty">Keine Einträge</div>'}</div>`;
+}
+
+function openAdmHolModal(){
+  const bl=document.getElementById('adm-bl')?.value||'TH';
+  const body=`
+    <div class="fg"><label>Name</label><input type="text" id="ahn" placeholder="z.B. Osterferien"></div>
+    <div class="g2">
+      <div class="fg"><label>Von</label><input type="date" id="ahs"></div>
+      <div class="fg"><label>Bis</label><input type="date" id="ahe"></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label>Typ</label><select id="aht"><option value="ferien">Schulferien</option><option value="feiertag">Feiertag</option></select></div>
+      <div class="fg"><label>Bundesland</label><input type="text" id="ahbl" value="${bl}"></div>
+    </div>`;
+  openModal('📅 Eintrag hinzufügen',body,`<button class="btn btn-s" onclick="closeModal()">Abbrechen</button><button class="btn btn-p" onclick="saveAdmHoliday()">Speichern</button>`);
+}
+
+async function saveAdmHoliday(){
+  const n=document.getElementById('ahn').value,s=document.getElementById('ahs').value,e=document.getElementById('ahe').value;
+  const t=document.getElementById('aht').value,bl=document.getElementById('ahbl').value;
+  if(!n||!s||!e){toast('Alle Felder ausfüllen','e');return;}
+  try{
+    await api('/api/dp/admin/holidays',{method:'POST',body:JSON.stringify({name:n,start_date:s,end_date:e,type:t,bundesland:bl,year:new Date(s).getFullYear()})});
+    closeModal();toast('Gespeichert');loadAdmHolidays();
+  }catch(err){toast(err.message,'e');}
+}
+
+async function delAdmHoliday(id){
+  if(!confirm('Eintrag löschen?'))return;
+  try{await api(`/api/dp/admin/holidays/${id}`,{method:'DELETE'});toast('Gelöscht');loadAdmHolidays();}catch(e){toast(e.message,'e');}
+}
+
+async function loadAdmFerienAPI(){
+  const bl=document.getElementById('adm-bl')?.value||'TH';
+  try{
+    toast('Lade Ferien...');
+    const r=await fetch(`/api/dp/admin/ferien-proxy?bundesland=${bl}&year=${S_ADM.fy}`);
+    if(!r.ok)throw new Error('API nicht erreichbar');
+    const data=await r.json();
+    for(const f of data) await api('/api/dp/admin/holidays',{method:'POST',body:JSON.stringify({name:f.name,start_date:f.start.slice(0,10),end_date:f.end.slice(0,10),type:'ferien',bundesland:bl,year:S_ADM.fy})});
+    toast(`${data.length} Ferieneinträge geladen`);loadAdmHolidays();
+  }catch(e){toast('API-Fehler: '+e.message,'e');}
+}
+
+// ===== INIT =====
+checkSession();
+// Dashboard alle 5 Minuten neu laden (für Flurtablet)
+setInterval(()=>{ if(S.tab==='dash') loadDash(); }, 5*60*1000);
+</script>
+</body>
+</html>
