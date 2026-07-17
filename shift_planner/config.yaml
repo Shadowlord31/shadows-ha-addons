@@ -1,6 +1,6 @@
 name: "Shift Planner"
 description: "Self-hosted shift & vacation planner - shifts, work times, vacation budget/carryover, holidays"
-version: "0.1.1"
+version: "0.1.2"
 slug: "shift_planner"
 init: false
 arch:
@@ -10,6 +10,5 @@ arch:
 ingress: true
 ingress_port: 3001
 panel_icon: mdi:calendar-clock
-webui: "http://[HOST]:[PORT:3001]/"
 options: {}
 schema: {}
