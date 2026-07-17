@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+<script>window.__BASE__="__INGRESS_BASE__";</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dienstplan</title>
@@ -473,7 +474,7 @@ function toast(msg,type='s'){
 }
 
 async function api(url,opts={}){
-  const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
+  const r=await fetch((window.__BASE__||'')+url,{headers:{'Content-Type':'application/json'},...opts});
   const d=await r.json();if(!r.ok)throw new Error(d.error||'Fehler');return d;
 }
 
@@ -575,7 +576,7 @@ async function loadDash(){
     `${String(sunday.getDate()).padStart(2,'0')}.${String(sunday.getMonth()+1).padStart(2,'0')}.${sunday.getFullYear()}`;
 
   try{
-    const users=await fetch(`/api/dp/dashboard?week_start=${ws}`).then(r=>r.json());
+    const users=await fetch((window.__BASE__||'')+`/api/dp/dashboard?week_start=${ws}`).then(r=>r.json());
     if(!Array.isArray(users)||!users.length){el.innerHTML='<div class="empty">Keine Daten</div>';return;}
 
     el.innerHTML=users.map(u=>{
@@ -1176,7 +1177,7 @@ async function loadFerienAPI(){
   try{
     const set=await api('/api/dp/settings');const bl=set.bundesland||'BY';
     toast('Lade Ferien...');
-    const r=await fetch(`/api/dp/ferien-proxy?bundesland=${bl}&year=${S.fy}`);
+    const r=await fetch((window.__BASE__||'')+`/api/dp/ferien-proxy?bundesland=${bl}&year=${S.fy}`);
     if(!r.ok)throw new Error('API nicht erreichbar');
     const data=await r.json();
     for(const f of data)await api('/api/dp/holidays',{method:'POST',body:JSON.stringify({name:f.name,start_date:f.start.slice(0,10),end_date:f.end.slice(0,10),type:'ferien',bundesland:bl,year:S.fy})});
@@ -1400,7 +1401,7 @@ async function loadAdmFerienAPI(){
   const bl=document.getElementById('adm-bl')?.value||'TH';
   try{
     toast('Lade Ferien...');
-    const r=await fetch(`/api/dp/ferien-proxy?bundesland=${bl}&year=${S_ADM.fy}`);
+    const r=await fetch((window.__BASE__||'')+`/api/dp/ferien-proxy?bundesland=${bl}&year=${S_ADM.fy}`);
     if(!r.ok)throw new Error('API nicht erreichbar');
     const data=await r.json();
     for(const f of data) await api('/api/dp/holidays',{method:'POST',body:JSON.stringify({name:f.name,start_date:f.start.slice(0,10),end_date:f.end.slice(0,10),type:'ferien',bundesland:bl,year:S_ADM.fy})});
