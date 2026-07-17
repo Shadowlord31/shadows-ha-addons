@@ -24,7 +24,7 @@ router.get('/beds/occupancy', (req, res) => {
   try {
     const y = new Date().getFullYear();
     const plannerRows = db.prepare(`
-      SELECT p.id AS plan_id, p.bed_id, p.plant, p.emoji,
+      SELECT p.id AS plan_id, p.bed_id, p.plant, p.emoji, p.plant_id,
              (CASE WHEN p.is_permanent THEN 'dauerhaft' ELSE 'planer' END) AS source,
              pf.name AS fam_name, pf.color AS fam_color, p.month, p.month_to
       FROM plans p LEFT JOIN plant_families pf ON p.plant_family_id = pf.id
@@ -33,7 +33,7 @@ router.get('/beds/occupancy', (req, res) => {
     `).all(y, y, y);
 
     const tagebuchRows = db.prepare(`
-      SELECT e.bed_id, e.plant, e.emoji, pf2.name AS fam_name, pf2.color AS fam_color
+      SELECT e.bed_id, e.plant, e.emoji, e.plant_id, pf2.name AS fam_name, pf2.color AS fam_color
       FROM entries e LEFT JOIN plant_families pf2 ON e.plant_family_id = pf2.id
       WHERE e.cat = 'plant' AND e.bed_id IS NOT NULL AND CAST(strftime('%Y', e.entry_date) AS INTEGER) = ?
         AND NOT EXISTS (
@@ -45,13 +45,13 @@ router.get('/beds/occupancy', (req, res) => {
     const result = {};
     plannerRows.forEach(r => {
       (result[r.bed_id] ||= []).push({
-        plan_id: r.plan_id, plant: r.plant, emoji: r.emoji, source: r.source,
+        plan_id: r.plan_id, plant: r.plant, emoji: r.emoji, plant_id: r.plant_id, source: r.source,
         fam_name: r.fam_name, fam_color: r.fam_color, month: r.month, month_to: r.month_to
       });
     });
     tagebuchRows.forEach(r => {
       (result[r.bed_id] ||= []).push({
-        plan_id: null, plant: r.plant, emoji: r.emoji, source: 'tagebuch',
+        plan_id: null, plant: r.plant, emoji: r.emoji, plant_id: r.plant_id, source: 'tagebuch',
         fam_name: r.fam_name, fam_color: r.fam_color, month: null, month_to: null
       });
     });

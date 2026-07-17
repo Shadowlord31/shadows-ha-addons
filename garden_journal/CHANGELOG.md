@@ -122,3 +122,10 @@
   dadurch waren Kommazahlen wie "3,001 Stueck" moeglich. Springt jetzt bei "Stueck"
   auf ganze Zahlen (step=1) um, rundet einen evtl. schon eingegebenen Wert automatisch
 - Gesamtsumme in der Ernten-Detailansicht rundet Stueck jetzt ebenfalls auf ganze Zahlen
+
+## 0.4.5
+
+- Fix: /beds/occupancy lieferte kein plant_id mit. Dadurch schickte die Felder-HA-Karte
+  bei Ernten kein plant_id mit, wodurch die Ernte im Tagebuch als eigene, lose
+  Namens-Gruppe erschien statt sich mit der bestehenden katalog-verknuepften
+  Pflanzung zu vereinen. plant_id wird jetzt in beiden Occupancy-Zweigen mitgeliefert
