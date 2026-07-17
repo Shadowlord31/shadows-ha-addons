@@ -20,8 +20,22 @@ router.post('/migrate/postgres', async (req, res) => {
 
   const client = new Client({ host, port, user, password, database });
   const counts = {};
-  const toDateStr = (v) => v == null ? null : (v instanceof Date ? v.toISOString().split('T')[0] : v);
-  const toTsStr = (v) => v == null ? null : (v instanceof Date ? v.toISOString().replace('T', ' ').replace('Z', '') : v);
+  // WICHTIG: pg liefert DATE/TIMESTAMP-Spalten als JS-Date, dessen Komponenten
+  // (getFullYear/getMonth/getDate/...) bereits in LOKALER Zeit dem echten
+  // Kalendertag entsprechen. toISOString() rechnet dagegen nach UTC um --
+  // bei einem Server mit Sommerzeit (UTC+2) rutscht das Datum dadurch einen
+  // Tag zurueck. Deshalb hier ausschliesslich lokale Getter verwenden.
+  const pad = (n) => String(n).padStart(2, '0');
+  const toDateStr = (v) => {
+    if (v == null) return null;
+    if (!(v instanceof Date)) return v;
+    return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
+  };
+  const toTsStr = (v) => {
+    if (v == null) return null;
+    if (!(v instanceof Date)) return v;
+    return `${toDateStr(v)} ${pad(v.getHours())}:${pad(v.getMinutes())}:${pad(v.getSeconds())}`;
+  };
   const toTimeStr = (v) => v == null ? null : String(v).slice(0, 5); // 'HH:MM:SS' -> 'HH:MM'
   const b = (v) => v ? 1 : 0;
 
