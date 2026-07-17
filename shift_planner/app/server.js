@@ -11,6 +11,7 @@ app.use(express.json());
 app.use(ingressAuth);
 
 app.use('/', require('./routes/dienstplan'));
+app.use('/api/dp', require('./routes/migrate'));
 
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public/dienstplan/index.html')));
 app.get('/dienstplan*', (_req, res) => res.sendFile(path.join(__dirname, 'public/dienstplan/index.html')));
