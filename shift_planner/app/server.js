@@ -28,6 +28,7 @@ app.use(ingressAuth);
 
 app.use('/', require('./routes/dienstplan'));
 app.use('/api/dp', require('./routes/migrate'));
+app.use('/', require('./routes/integration'));
 
 app.get('/', sendIndexWithBase);
 app.get('/dienstplan*', sendIndexWithBase);
