@@ -61,6 +61,11 @@ router.get('/api/dp/integration/summary', tokenAuth, (req, res) => {
         }
       }
 
+      // Laeuft gerade Urlaub?
+      const vacationToday = db.prepare(
+        `SELECT 1 FROM dp_vacations WHERE user_id=? AND start_date<=? AND end_date>=? AND status!='abgelehnt' LIMIT 1`
+      ).get(u.id, today, today);
+
       // Naechster Urlaub
       const nextVacation = db.prepare(
         `SELECT start_date, end_date, status, note FROM dp_vacations
@@ -83,6 +88,7 @@ router.get('/api/dp/integration/summary', tokenAuth, (req, res) => {
         on_shift_now: onShiftNow,
         shift_start: shiftStartIso,
         shift_end: shiftEndIso,
+        on_vacation_now: !!vacationToday,
         next_shift: nextShift ? {
           date: nextShift.date,
           start: nextShift.actual_start || nextShift.default_start,
@@ -106,6 +112,43 @@ router.get('/api/dp/integration/summary', tokenAuth, (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// Schichten eines Users in einem Datumsbereich, fuer die HA-Kalender-Entitaet.
+// HA fragt beim Anzeigen selbst ab, welcher Zeitraum gebraucht wird (Wochen-,
+// Monatsansicht etc.) -- daher hier ein echter Bereich statt fest 7 Tage.
+router.get('/api/dp/integration/shifts', tokenAuth, (req, res) => {
+  const { username, start, end } = req.query;
+  if (!username || !start || !end) return res.status(400).json({ error: 'username, start und end erforderlich' });
+  const user = db.prepare('SELECT id FROM dp_users WHERE username=?').get(username);
+  if (!user) return res.status(404).json({ error: 'User nicht gefunden' });
+
+  const rows = db.prepare(
+    `SELECT s.date, s.actual_start, s.actual_end, st.name as type_name, st.short_name, st.color,
+            st.default_start, st.default_end, st.counts_as_work
+     FROM dp_shifts s LEFT JOIN dp_shift_types st ON s.shift_type_id = st.id
+     WHERE s.user_id=? AND s.date>=? AND s.date<=? ORDER BY s.date ASC`
+  ).all(user.id, start, end);
+
+  const events = rows.filter(r => r.counts_as_work).map(r => {
+    const startTime = r.actual_start || r.default_start || '00:00';
+    const endTime = r.actual_end || r.default_end || '23:59';
+    let endDate = r.date;
+    // Nachtschicht: Ende liegt zeitlich vor Beginn -> Ende ist am Folgetag
+    if (endTime <= startTime) {
+      const d = new Date(r.date + 'T12:00:00'); d.setDate(d.getDate() + 1);
+      endDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    return {
+      summary: r.type_name || 'Schicht',
+      short_name: r.short_name,
+      color: r.color,
+      start: `${r.date}T${startTime}:00`,
+      end: `${endDate}T${endTime}:00`
+    };
+  });
+
+  res.json({ username, events });
 });
 
 module.exports = router;
