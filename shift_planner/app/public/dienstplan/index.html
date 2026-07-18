@@ -588,10 +588,10 @@ async function loadDash(){
       const nv=u.next_vacation;
       let vacHtml='<span style="color:var(--text3)">Kein Urlaub geplant</span>';
       if(nv){
-        const dl=until(nv.start_text);
+        const dl=until(nv.start_date);
         const lbl=dl>0?`in ${dl} Tagen`:dl===0?'Heute!':'läuft';
         vacHtml=`<span style="color:var(--accent);font-weight:600">${lbl}</span>
-          <span style="color:var(--text2);font-size:12px;margin-left:8px">${fmt(nv.start_text)} – ${fmt(nv.end_text)} · ${wdays(nv.start_text,nv.end_text)} Tage</span>`;
+          <span style="color:var(--text2);font-size:12px;margin-left:8px">${fmt(nv.start_date)} – ${fmt(nv.end_date)} · ${wdays(nv.start_date,nv.end_date)} Tage</span>`;
       }
 
       // Wochengitter
