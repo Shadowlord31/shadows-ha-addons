@@ -151,4 +151,86 @@ router.get('/api/dp/integration/shifts', tokenAuth, (req, res) => {
   res.json({ username, events });
 });
 
+// ===== ARBEITSZEIT-ERFASSUNG (fuer HA-Services, u.a. Zonen-Automationen) =====
+
+function findUserOr404(username, res) {
+  const user = db.prepare('SELECT * FROM dp_users WHERE username=?').get(username);
+  if (!user) { res.status(404).json({ error: 'User nicht gefunden' }); return null; }
+  return user;
+}
+function nowHHMM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function computeHours(start, end, breakMin) {
+  // dp_work_times bildet einen einzelnen Kalendertag ab (anders als
+  // dp_shifts+shift_types, die Nachtschichten ueber Mitternacht kennen) --
+  // hier also KEIN 24h-Wrap, sondern auf 0 clampen (z.B. Pause > Arbeitszeit
+  // bei einem sehr kurzen Check-in/Check-out-Test).
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const mins = Math.max(0, (eh * 60 + em) - (sh * 60 + sm) - (breakMin || 0));
+  return Math.round((mins / 60) * 100) / 100;
+}
+
+// Kommt-Buchung: legt/aktualisiert den heutigen Arbeitszeit-Eintrag mit
+// Start = jetzt. Kein Fehler, wenn schon eine Startzeit existiert (einfach
+// ueberschrieben) -- z.B. bei doppeltem Zonen-Enter-Trigger.
+router.post('/api/dp/integration/checkin', tokenAuth, (req, res) => {
+  const { username, break_minutes } = req.body || {};
+  if (!username) return res.status(400).json({ error: 'username erforderlich' });
+  const user = findUserOr404(username, res); if (!user) return;
+  const date = todayStr(), start = nowHHMM();
+  const row = db.prepare(
+    `INSERT INTO dp_work_times (user_id,date,start_time,break_minutes,work_type) VALUES (?,?,?,?, 'work')
+     ON CONFLICT(user_id,date) DO UPDATE SET start_time=excluded.start_time,break_minutes=COALESCE(excluded.break_minutes,dp_work_times.break_minutes)
+     RETURNING *`
+  ).get(user.id, date, start, break_minutes ?? null);
+  res.json(row);
+});
+
+// Geht-Buchung: setzt Ende = jetzt auf dem heutigen Eintrag und berechnet die
+// Stunden. Legt den Eintrag notfalls auch ohne vorheriges Check-in an
+// (Start dann = Ende, 0 Stunden) statt mit Fehler abzubrechen.
+router.post('/api/dp/integration/checkout', tokenAuth, (req, res) => {
+  const { username, break_minutes } = req.body || {};
+  if (!username) return res.status(400).json({ error: 'username erforderlich' });
+  const user = findUserOr404(username, res); if (!user) return;
+  const date = todayStr(), end = nowHHMM();
+  let existing = db.prepare('SELECT * FROM dp_work_times WHERE user_id=? AND date=?').get(user.id, date);
+  const start = existing?.start_time || end;
+  const brk = break_minutes ?? existing?.break_minutes ?? 0;
+  const hours = computeHours(start, end, brk);
+  const row = db.prepare(
+    `INSERT INTO dp_work_times (user_id,date,start_time,end_time,break_minutes,actual_hours,work_type) VALUES (?,?,?,?,?,?, 'work')
+     ON CONFLICT(user_id,date) DO UPDATE SET end_time=excluded.end_time,break_minutes=excluded.break_minutes,actual_hours=excluded.actual_hours
+     RETURNING *`
+  ).get(user.id, date, start, end, brk, hours);
+  res.json(row);
+});
+
+// Manueller/vollstaendiger Eintrag (z.B. Nachtragen, oder eine Automation die
+// Start+Ende in einem Rutsch kennt statt zwei Zonen-Trigger zu brauchen).
+router.post('/api/dp/integration/worktime', tokenAuth, (req, res) => {
+  const { username, date, start_time, end_time, break_minutes, work_type, note } = req.body || {};
+  if (!username || !date || !start_time || !end_time) {
+    return res.status(400).json({ error: 'username, date, start_time und end_time erforderlich' });
+  }
+  const user = findUserOr404(username, res); if (!user) return;
+  const brk = break_minutes || 0;
+  const wt = work_type || 'work';
+  const isSpecial = wt === 'vacation' || wt === 'holiday_comp' || wt === 'sick';
+  const hours = isSpecial ? 8 : computeHours(start_time, end_time, brk);
+  const row = db.prepare(
+    `INSERT INTO dp_work_times (user_id,date,start_time,end_time,break_minutes,actual_hours,work_type,note) VALUES (?,?,?,?,?,?,?,?)
+     ON CONFLICT(user_id,date) DO UPDATE SET start_time=excluded.start_time,end_time=excluded.end_time,break_minutes=excluded.break_minutes,actual_hours=excluded.actual_hours,work_type=excluded.work_type,note=excluded.note
+     RETURNING *`
+  ).get(user.id, date, start_time, end_time, brk, hours, wt, note || null);
+  res.json(row);
+});
+
 module.exports = router;
