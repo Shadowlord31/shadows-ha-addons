@@ -213,18 +213,40 @@ router.delete('/api/dp/holidays/:id', auth, (req, res) => {
   db.prepare('DELETE FROM dp_holidays WHERE id=? AND user_id=?').run(req.params.id, req.dpUser.id);
   res.json({ ok: true });
 });
-router.get('/api/dp/ferien-proxy', auth, (req, res) => {
+// openholidaysapi.org: deckt Schulferien UND gesetzliche Feiertage fuer alle
+// deutschen Bundeslaender ab, inkl. mehrerer Jahre im Voraus (ferien-api.de
+// hatte fuer viele Laender/Jahre schlicht keine Daten).
+function fetchOpenHolidays(kind, bundesland, year) {
+  return new Promise((resolve, reject) => {
+    const https = require('https');
+    const url = `https://openholidaysapi.org/${kind}?countryIsoCode=DE&languageIsoCode=DE&validFrom=${year}-01-01&validTo=${year}-12-31&subdivisionCode=DE-${bundesland}`;
+    https.get(url, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => {
+        if (r.statusCode >= 400) return reject(new Error(`openholidaysapi.org (${kind}) antwortete mit HTTP ${r.statusCode}`));
+        try { resolve(JSON.parse(d)); } catch { reject(new Error(`openholidaysapi.org (${kind}) lieferte keine gueltige Antwort`)); }
+      });
+    }).on('error', e => reject(new Error(`openholidaysapi.org nicht erreichbar: ${e.message}`)));
+  });
+}
+
+router.get('/api/dp/ferien-proxy', auth, async (req, res) => {
   const { bundesland, year } = req.query;
   if (!bundesland || !year) return res.status(400).json({ error: 'fehlt' });
-  const https = require('https');
-  https.get(`https://ferien-api.de/api/v1/holidays/${bundesland}/${year}`, r => {
-    let d = ''; r.on('data', c => d += c);
-    r.on('end', () => {
-      if (r.statusCode === 429) return res.status(502).json({ error: 'ferien-api.de ist aktuell rate-limitiert (429) -- bitte spaeter erneut versuchen' });
-      if (r.statusCode >= 400) return res.status(502).json({ error: `ferien-api.de antwortete mit HTTP ${r.statusCode}` });
-      try { res.json(JSON.parse(d)); } catch { res.status(502).json({ error: 'ferien-api.de lieferte keine gueltige Antwort' }); }
-    });
-  }).on('error', e => res.status(502).json({ error: `ferien-api.de nicht erreichbar: ${e.message}` }));
+  try {
+    const [school, pub] = await Promise.all([
+      fetchOpenHolidays('SchoolHolidays', bundesland, year),
+      fetchOpenHolidays('PublicHolidays', bundesland, year)
+    ]);
+    const nameOf = (n) => (n.find(x => x.language === 'DE') || n[0] || {}).text || 'Feiertag';
+    const merged = [
+      ...school.map(h => ({ name: nameOf(h.name), start: h.startDate, end: h.endDate, type: 'ferien' })),
+      ...pub.map(h => ({ name: nameOf(h.name), start: h.startDate, end: h.endDate, type: 'feiertag' }))
+    ];
+    res.json(merged);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
 });
 
 // ===== SETTINGS =====
