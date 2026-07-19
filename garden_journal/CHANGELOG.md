@@ -149,3 +149,11 @@
   von einer Instanz auf eine andere (z.B. Hauptinstanz -> Testinstanz)
 - Lokal getestet: Export/Import zwischen zwei Containern, Beete und
   Belegung (inkl. aller Verknuepfungen) 1:1 identisch nach dem Transfer
+
+## 0.4.8
+
+- Neu: Tab "Datensicherung" in den Einstellungen - Export (Download als Datei)
+  und Import (Datei hochladen) direkt aus der App heraus, ohne Umweg ueber
+  API-Aufrufe. Nuetzlich zum Uebertragen der Datenbank zwischen zwei
+  Garden-Journal-Instanzen (z.B. Haupt- auf Testinstanz)
+- Import ueberschreibt alle vorhandenen Daten, mit Bestaetigungsabfrage

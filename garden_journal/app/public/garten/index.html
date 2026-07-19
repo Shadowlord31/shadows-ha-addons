@@ -329,6 +329,7 @@
           <button class="tj-tab" id="gt-tab-kostenkat" onclick="switchGtTab('kostenkat')">&#128176; Kostenkat.</button>
           <button class="tj-tab" id="gt-tab-sperrliste" onclick="switchGtTab('sperrliste')">&#128683; Sperrliste</button>
           <button class="tj-tab" id="gt-tab-pflanzen-familien" onclick="switchGtTab('pflanzen-familien')">&#127807; Pflanzen &amp; Familien</button>
+          <button class="tj-tab" id="gt-tab-daten" onclick="switchGtTab('daten')">&#128190; Datensicherung</button>
         </div>
         <div id="gt-action-btn"></div>
       </div>
@@ -356,6 +357,20 @@
             <input id="pc-cat-name" type="text" placeholder="Neue Kategorie&#8230;" style="flex:1;min-width:120px" autocomplete="off"/>
             <button class="btn-primary btn-sm" onclick="addPlantCategory()">+ Hinzuf&#252;gen</button>
           </div>
+        </div>
+      </div>
+      <div id="gt-panel-daten" style="display:none">
+        <div style="background:var(--cream);border-radius:12px;padding:16px;border:1px solid var(--cream-dark);margin-bottom:16px">
+          <div style="font-family:'Playfair Display',serif;font-size:.95rem;color:var(--green-deep);margin-bottom:8px">&#128229; Datenbank exportieren</div>
+          <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:12px">L\u00e4dt alle Daten (Beete, Eintr\u00e4ge, Pflanzen, Planung, Geh\u00f6lze, Kosten) als eine Datei herunter - z.B. um sie in eine andere Garden-Journal-Instanz zu \u00fcbertragen.</p>
+          <button class="btn-primary btn-sm" onclick="exportGartenDaten()">&#128229; Jetzt exportieren</button>
+        </div>
+        <div style="background:#fdf0d0;border-radius:12px;padding:16px;border:1px solid #e8a020">
+          <div style="font-family:'Playfair Display',serif;font-size:.95rem;color:#8a5a00;margin-bottom:8px">&#128228; Datenbank importieren</div>
+          <p style="font-size:.85rem;color:#8a5a00;margin-bottom:12px"><strong>Achtung:</strong> \u00dcberschreibt <strong>alle</strong> aktuellen Daten auf dieser Instanz unwiderruflich mit dem Inhalt der Datei. Vorher am besten selbst exportieren, falls du zur\u00fcck m\u00f6chtest.</p>
+          <input type="file" id="import-file-input" accept="application/json" style="margin-bottom:10px;display:block"/>
+          <button class="btn-primary btn-sm" style="background:linear-gradient(135deg,#c0392b,#922b21)" onclick="importGartenDaten()">&#128228; Datei importieren (\u00fcberschreibt alles)</button>
+          <div id="import-status" style="margin-top:10px;font-size:.85rem"></div>
         </div>
       </div>
       </div>
@@ -596,12 +611,51 @@ updateYearLabel();updateStatsYearLabel();
 var gtActiveTab='beete';
 function switchGtTab(t){
   gtActiveTab=t;
-  ['beete','pflanzen-familien','kostenkat'].forEach(x=>{var b=document.getElementById('gt-tab-'+x);if(b)b.classList.toggle('active',x===t);var p=document.getElementById('gt-panel-'+x);if(p)p.style.display=x===t?'':'none';});
+  ['beete','pflanzen-familien','kostenkat','daten'].forEach(x=>{var b=document.getElementById('gt-tab-'+x);if(b)b.classList.toggle('active',x===t);var p=document.getElementById('gt-panel-'+x);if(p)p.style.display=x===t?'':'none';});
   var ab=document.getElementById('gt-action-btn');if(!ab)return;
   if(t==='beete')ab.innerHTML='<button class="btn-primary btn-sm" onclick="openBedAddModal()" style="font-size:.8rem;padding:5px 10px">&#10133; Neues Beet</button>';
   else ab.innerHTML='';
   if(t==='pflanzen-familien')renderPflanzenFamilien();
 }
+async function exportGartenDaten(){
+  try{
+    const res=await fetch('garten/api/admin/export');
+    if(!res.ok)throw new Error(await res.text());
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const stamp=new Date().toISOString().split('T')[0];
+    a.href=url;
+    a.download='garden-journal-export-'+stamp+'.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('\u{1F4E5} Export heruntergeladen');
+  }catch(e){showToast('\u274C Fehler beim Export');}
+}
+
+async function importGartenDaten(){
+  const input=document.getElementById('import-file-input');
+  const statusEl=document.getElementById('import-status');
+  if(!input.files||!input.files[0]){showToast('Bitte zuerst eine Datei ausw\u00e4hlen');return;}
+  if(!confirm('Wirklich ALLE aktuellen Daten auf dieser Instanz mit dem Inhalt der Datei \u00fcberschreiben? Das kann nicht r\u00fcckg\u00e4ngig gemacht werden.'))return;
+  statusEl.textContent='Importiere\u2026';
+  try{
+    const text=await input.files[0].text();
+    const parsed=JSON.parse(text);
+    const res=await fetch('garten/api/admin/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(parsed)});
+    if(!res.ok)throw new Error(await res.text());
+    const result=await res.json();
+    statusEl.textContent='Fertig: '+Object.entries(result.counts).map(function(e){return e[0]+' ('+e[1]+')';}).join(', ');
+    showToast('\u{1F4E8} Import abgeschlossen');
+    await loadAll();
+  }catch(e){
+    statusEl.textContent='Fehler: '+e.message;
+    showToast('\u274C Fehler beim Import');
+  }
+}
+
 var ffActiveTab='rotation';
 function switchFfTab(t){
   ffActiveTab=t;
