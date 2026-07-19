@@ -172,3 +172,11 @@
 - Erntemengen-Karten: mehr Innenabstand (10px -> 14px/16px) und mehr Abstand
   zwischen Kachel-Zeilen sowie zwischen den Kacheln im Grid (10px -> 14px) - war
   zu eng beieinander
+
+## 0.4.11
+
+- Fix (echte Ursache diesmal): Der 14px-Abstand aus v0.4.10 war technisch korrekt
+  vorhanden, aber unsichtbar, weil Seitenhintergrund und Kachel-Hintergrund
+  dieselbe Cream-Farbe hatten. Karten-Hintergrund auf Weiss umgestellt (plus
+  leichter Schatten), damit sich die Karten sichtbar vom Hintergrund und
+  voneinander abheben
