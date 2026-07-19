@@ -157,3 +157,12 @@
   API-Aufrufe. Nuetzlich zum Uebertragen der Datenbank zwischen zwei
   Garden-Journal-Instanzen (z.B. Haupt- auf Testinstanz)
 - Import ueberschreibt alle vorhandenen Daten, mit Bestaetigungsabfrage
+
+## 0.4.9
+
+- Statistik-Seite aufgeraeumt: Uebersicht-Kacheln ganz oben, "Haeufigste Pflanzen"
+  und "Eintraege nach Beet" entfernt
+- "Erntemengen" komplett neu: pro Pflanze jetzt eine Karte mit korrekt
+  zusammengerechneter Gesamtmenge (g/kg werden vereinheitlicht statt wie bisher
+  als getrennte Zeilen pro Einheit angezeigt), Anzahl Teilernten, ob final
+  geerntet, und Vergleich mit dem Vorjahr (falls Daten vorhanden)
