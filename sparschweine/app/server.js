@@ -25,7 +25,8 @@ function sendIndexWithBase(req, res) {
 app.use(express.json());
 
 app.use('/', require('./routes/sparschweine'));
-app.use('/', require('./routes/import'));
+app.use('/', require('./routes/kategorien'));
+app.use('/', require('./routes/statistik'));
 
 app.get('/', sendIndexWithBase);
 app.get('/sparschweine*', sendIndexWithBase);

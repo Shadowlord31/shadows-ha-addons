@@ -13,11 +13,12 @@
     background: #121212; color: #eee; padding: 16px; padding-bottom: 80px;
   }
   h1 { font-size: 1.4rem; margin: 4px 0 16px; display: flex; justify-content: space-between; align-items: center; }
-  .gear { background: none; border: none; color: #aaa; font-size: 1.3rem; cursor: pointer; }
+  .icon-btns { display: flex; gap: 4px; }
+  .icon-btn { background: none; border: none; color: #aaa; font-size: 1.2rem; cursor: pointer; padding: 4px 6px; }
   .grid { display: grid; gap: 12px; }
   .card {
     background: #1e1e1e; border-radius: 14px; padding: 14px 16px;
-    border-left: 6px solid var(--farbe, #4CAF50);
+    border-left: 6px solid var(--farbe, #4CAF50); cursor: pointer;
   }
   .card-top { display: flex; justify-content: space-between; align-items: baseline; }
   .card-name { font-weight: 600; font-size: 1.05rem; }
@@ -25,11 +26,6 @@
   .bar-bg { background: #333; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
   .bar-fill { height: 100%; background: var(--farbe, #4CAF50); }
   .card-ziel { font-size: 0.8rem; color: #999; margin-top: 4px; }
-  .card-actions { display: flex; gap: 8px; margin-top: 12px; }
-  button.action {
-    flex: 1; padding: 8px; border-radius: 8px; border: none;
-    background: #2a2a2a; color: #eee; font-size: 0.9rem;
-  }
   .fab {
     position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px;
     border-radius: 50%; background: #4CAF50; border: none; color: white;
@@ -42,79 +38,151 @@
   .modal-bg.open { display: flex; }
   .modal {
     background: #1e1e1e; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0;
-    padding: 20px; padding-bottom: 32px;
+    padding: 20px; padding-bottom: 32px; max-height: 88vh; overflow-y: auto;
   }
-  .modal h2 { margin-top: 0; font-size: 1.1rem; }
-  .modal input { width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px; border: 1px solid #444; background: #121212; color: #eee; font-size: 1rem; }
+  .modal h2 { margin-top: 0; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; }
+  .modal input, .modal select {
+    width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px;
+    border: 1px solid #444; background: #121212; color: #eee; font-size: 1rem;
+  }
   .modal-actions { display: flex; gap: 10px; }
   .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 1rem; }
   .btn-primary { background: #4CAF50; color: white; }
   .btn-secondary { background: #333; color: #eee; }
   .btn-danger { background: #b23c3c; color: white; }
+  .btn-close { background: none; border: none; color: #aaa; font-size: 1.3rem; }
   .empty { text-align: center; color: #888; margin-top: 60px; }
-  .hint { font-size: 0.8rem; color: #888; margin-top: 4px; }
+
+  /* Detailansicht */
+  .detail-stand { font-size: 1.6rem; font-weight: 700; margin: 4px 0 14px; }
+  .entry-list { margin-top: 14px; }
+  .entry-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  .entry-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .entry-main { flex: 1; min-width: 0; }
+  .entry-kat { font-size: 0.75rem; color: #999; }
+  .entry-beschr { font-size: 0.9rem; }
+  .entry-datum { font-size: 0.7rem; color: #777; }
+  .entry-betrag { font-weight: 600; white-space: nowrap; }
+  .entry-betrag.pos { color: #4CAF50; }
+  .entry-betrag.neg { color: #e57373; }
+  .entry-del { background: none; border: none; color: #666; font-size: 1rem; padding: 4px; }
+
+  /* Kategorien */
+  .kat-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
+  .kat-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .kat-name { flex: 1; }
+
+  /* Statistik */
+  #view-stats { display: none; }
+  .stat-row { margin-bottom: 16px; }
+  .stat-head { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; }
+  .stat-bar-bg { background: #262626; border-radius: 6px; height: 10px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; }
+  .stat-sub { font-size: 0.75rem; color: #888; margin-top: 3px; }
+
   .toast {
     position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
     background: #333; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
-    opacity: 0; transition: opacity .3s; pointer-events: none;
+    opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 20;
   }
   .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
-  <h1>🐷 Sparschweine <button class="gear" onclick="openSettings()">⚙️</button></h1>
+
+<div id="view-main">
+  <h1>🐷 Sparschweine
+    <span class="icon-btns">
+      <button class="icon-btn" onclick="openStats()" title="Statistik">📊</button>
+      <button class="icon-btn" onclick="openKategorien()" title="Kategorien">🏷️</button>
+    </span>
+  </h1>
   <div id="grid" class="grid"></div>
-  <div id="empty" class="empty" style="display:none">Noch keine Sparschweine. Leg eins an, oder importiere aus der Finanz-App (Zahnrad).</div>
-
+  <div id="empty" class="empty" style="display:none">Noch keine Sparschweine. Leg eins mit dem + an.</div>
   <button class="fab" onclick="openNewPig()">+</button>
+</div>
 
-  <div class="modal-bg" id="modal-pig">
-    <div class="modal">
-      <h2 id="pig-modal-title">Neues Sparschwein</h2>
-      <input type="hidden" id="pig-id">
-      <label>Name</label>
-      <input type="text" id="pig-name" placeholder="z.B. Urlaub">
-      <label>Zielbetrag (optional)</label>
-      <input type="number" id="pig-ziel" placeholder="z.B. 500" step="0.01">
-      <label>Farbe</label>
-      <input type="color" id="pig-farbe" value="#4CAF50">
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="closeModal('modal-pig')">Abbrechen</button>
-        <button class="btn-primary" onclick="savePig()">Speichern</button>
-      </div>
+<div id="view-stats">
+  <h1><button class="icon-btn" onclick="closeStats()">← Zurück</button> Statistik</h1>
+  <div id="stats-list"></div>
+  <div id="stats-empty" class="empty" style="display:none">Noch keine Buchungen vorhanden.</div>
+</div>
+
+<!-- Modal: Neues/Bearbeiten Sparschwein -->
+<div class="modal-bg" id="modal-pig">
+  <div class="modal">
+    <h2 id="pig-modal-title">Neues Sparschwein</h2>
+    <input type="hidden" id="pig-id">
+    <label>Name</label>
+    <input type="text" id="pig-name" placeholder="z.B. Urlaub">
+    <label>Zielbetrag (optional)</label>
+    <input type="number" id="pig-ziel" placeholder="z.B. 500" step="0.01">
+    <label>Farbe</label>
+    <input type="color" id="pig-farbe" value="#4CAF50">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-pig')">Abbrechen</button>
+      <button class="btn-primary" onclick="savePig()">Speichern</button>
     </div>
   </div>
+</div>
 
-  <div class="modal-bg" id="modal-entry">
-    <div class="modal">
-      <h2>Buchen</h2>
-      <input type="hidden" id="entry-pig-id">
-      <label>Betrag (negativ = Abheben)</label>
-      <input type="number" id="entry-betrag" step="0.01" placeholder="z.B. 20 oder -10">
-      <label>Beschreibung (optional)</label>
-      <input type="text" id="entry-beschreibung" placeholder="z.B. Trinkgeld">
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="closeModal('modal-entry')">Abbrechen</button>
-        <button class="btn-primary" onclick="saveEntry()">Buchen</button>
-      </div>
+<!-- Modal: Detailansicht eines Sparschweins -->
+<div class="modal-bg" id="modal-detail">
+  <div class="modal">
+    <h2><span id="detail-name"></span><button class="btn-close" onclick="closeModal('modal-detail')">✕</button></h2>
+    <div class="detail-stand" id="detail-stand"></div>
+    <div id="detail-progress"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="openEditPigFromDetail()">✏️ Bearbeiten</button>
+      <button class="btn-danger" onclick="deletePigFromDetail()">🗑️ Löschen</button>
+    </div>
+    <div class="modal-actions" style="margin-top:8px">
+      <button class="btn-primary" onclick="openEntry()">💰 Buchen</button>
+    </div>
+    <div class="entry-list" id="detail-entries"></div>
+  </div>
+</div>
+
+<!-- Modal: Ein-/Auszahlung -->
+<div class="modal-bg" id="modal-entry">
+  <div class="modal">
+    <h2>Buchen</h2>
+    <label>Betrag (negativ = Abheben)</label>
+    <input type="number" id="entry-betrag" step="0.01" placeholder="z.B. 20 oder -10">
+    <label>Kategorie</label>
+    <select id="entry-kategorie"><option value="">Keine</option></select>
+    <label>Beschreibung (optional)</label>
+    <input type="text" id="entry-beschreibung" placeholder="z.B. Trinkgeld">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-entry')">Abbrechen</button>
+      <button class="btn-primary" onclick="saveEntry()">Buchen</button>
     </div>
   </div>
+</div>
 
-  <div class="modal-bg" id="modal-settings">
-    <div class="modal">
-      <h2>Import aus der Finanz-App</h2>
-      <p class="hint">URL &amp; PIN werden in den Addon-Einstellungen (Home Assistant → Add-ons → Sparschweine → Konfiguration) hinterlegt, nicht hier.</p>
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="closeModal('modal-settings')">Schließen</button>
-        <button class="btn-danger" onclick="runImport()">Jetzt importieren</button>
-      </div>
+<!-- Modal: Kategorien verwalten -->
+<div class="modal-bg" id="modal-kategorien">
+  <div class="modal">
+    <h2>Kategorien<button class="btn-close" onclick="closeModal('modal-kategorien')">✕</button></h2>
+    <div id="kat-list"></div>
+    <label style="margin-top:12px; display:block">Neue Kategorie</label>
+    <input type="text" id="kat-name" placeholder="z.B. Trinkgeld">
+    <input type="color" id="kat-farbe" value="#888888">
+    <div class="modal-actions">
+      <button class="btn-primary" style="flex:none; width:100%" onclick="addKategorie()">Hinzufügen</button>
     </div>
   </div>
+</div>
 
-  <div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 let pigs = [];
+let kategorien = [];
+let currentPigId = null;
 const base = () => window.__BASE__ || '';
 
 async function api(method, url, body) {
@@ -131,12 +199,11 @@ function toast(msg) {
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
 }
-
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-async function load() {
-  pigs = await api('GET', '/api/sparschweine');
+async function loadAll() {
+  [pigs, kategorien] = await Promise.all([api('GET', '/api/sparschweine'), api('GET', '/api/kategorien')]);
   render();
 }
 
@@ -145,12 +212,12 @@ function render() {
   const empty = document.getElementById('empty');
   grid.innerHTML = '';
   empty.style.display = pigs.length ? 'none' : 'block';
-
   for (const p of pigs) {
     const pct = p.zielbetrag ? Math.min(100, Math.round((p.kontostand / p.zielbetrag) * 100)) : null;
     const card = document.createElement('div');
     card.className = 'card';
     card.style.setProperty('--farbe', p.farbe);
+    card.onclick = () => openDetail(p.id);
     card.innerHTML = `
       <div class="card-top">
         <span class="card-name">${p.name}</span>
@@ -160,16 +227,12 @@ function render() {
         <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
         <div class="card-ziel">${pct}% von ${p.zielbetrag.toFixed(2)} €</div>
       ` : ''}
-      <div class="card-actions">
-        <button class="action" onclick="openEntry('${p.id}')">💰 Buchen</button>
-        <button class="action" onclick="openEditPig('${p.id}')">✏️ Bearbeiten</button>
-        <button class="action" onclick="deletePig('${p.id}')">🗑️</button>
-      </div>
     `;
     grid.appendChild(card);
   }
 }
 
+// ─── Sparschwein anlegen/bearbeiten ──────────────────────────────────────
 function openNewPig() {
   document.getElementById('pig-modal-title').textContent = 'Neues Sparschwein';
   document.getElementById('pig-id').value = '';
@@ -179,13 +242,14 @@ function openNewPig() {
   openModal('modal-pig');
 }
 
-function openEditPig(id) {
-  const p = pigs.find(x => x.id === id);
+function openEditPigFromDetail() {
+  const p = pigs.find(x => x.id === currentPigId);
   document.getElementById('pig-modal-title').textContent = 'Sparschwein bearbeiten';
   document.getElementById('pig-id').value = p.id;
   document.getElementById('pig-name').value = p.name;
   document.getElementById('pig-ziel').value = p.zielbetrag ?? '';
   document.getElementById('pig-farbe').value = p.farbe;
+  closeModal('modal-detail');
   openModal('modal-pig');
 }
 
@@ -197,44 +261,154 @@ async function savePig() {
   try {
     if (id) await api('PUT', `/api/sparschweine/${id}`, { name, zielbetrag, farbe });
     else await api('POST', '/api/sparschweine', { name, zielbetrag, farbe });
-    closeModal('modal-pig'); toast('Gespeichert'); await load();
+    closeModal('modal-pig'); toast('Gespeichert'); await loadAll();
   } catch (e) { toast(e.message); }
 }
 
-async function deletePig(id) {
+async function deletePigFromDetail() {
   if (!confirm('Sparschwein wirklich löschen?')) return;
-  await api('DELETE', `/api/sparschweine/${id}`);
-  toast('Gelöscht'); await load();
+  await api('DELETE', `/api/sparschweine/${currentPigId}`);
+  closeModal('modal-detail'); toast('Gelöscht'); await loadAll();
 }
 
-function openEntry(pigId) {
-  document.getElementById('entry-pig-id').value = pigId;
+// ─── Detailansicht ────────────────────────────────────────────────────────
+function renderDetail(p) {
+  document.getElementById('detail-name').textContent = p.name;
+  document.getElementById('detail-stand').textContent = p.kontostand.toFixed(2) + ' €';
+  document.getElementById('detail-stand').style.color = p.farbe;
+  const progressEl = document.getElementById('detail-progress');
+  if (p.zielbetrag) {
+    const pct = Math.min(100, Math.round((p.kontostand / p.zielbetrag) * 100));
+    progressEl.innerHTML = `
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${p.farbe}"></div></div>
+      <div class="card-ziel">${pct}% von ${p.zielbetrag.toFixed(2)} €</div>`;
+  } else {
+    progressEl.innerHTML = '';
+  }
+  const list = document.getElementById('detail-entries');
+  if (!p.eintraege.length) {
+    list.innerHTML = '<div class="empty" style="margin-top:20px">Noch keine Buchungen.</div>';
+    return;
+  }
+  list.innerHTML = p.eintraege.map(e => `
+    <div class="entry-row">
+      <div class="entry-dot" style="background:${e.kategorie_farbe || '#555'}"></div>
+      <div class="entry-main">
+        <div class="entry-beschr">${e.beschreibung || (e.betrag > 0 ? 'Einzahlung' : 'Abhebung')}</div>
+        <div class="entry-kat">${e.kategorie_name || 'Ohne Kategorie'} · <span class="entry-datum">${e.datum}</span></div>
+      </div>
+      <div class="entry-betrag ${e.betrag > 0 ? 'pos' : 'neg'}">${e.betrag > 0 ? '+' : ''}${e.betrag.toFixed(2)} €</div>
+      <button class="entry-del" onclick="deleteEntry('${e.id}')">🗑️</button>
+    </div>
+  `).join('');
+}
+
+async function openDetail(id) {
+  currentPigId = id;
+  const p = pigs.find(x => x.id === id);
+  renderDetail(p);
+  openModal('modal-detail');
+}
+
+async function deleteEntry(entryId) {
+  if (!confirm('Buchung löschen?')) return;
+  const updated = await api('DELETE', `/api/spareintraege/${entryId}`);
+  const idx = pigs.findIndex(x => x.id === updated.id);
+  if (idx >= 0) pigs[idx] = updated;
+  renderDetail(updated);
+  render();
+}
+
+// ─── Buchen ──────────────────────────────────────────────────────────────
+function openEntry() {
   document.getElementById('entry-betrag').value = '';
   document.getElementById('entry-beschreibung').value = '';
+  const sel = document.getElementById('entry-kategorie');
+  sel.innerHTML = '<option value="">Keine</option>' +
+    kategorien.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
   openModal('modal-entry');
 }
 
 async function saveEntry() {
-  const pigId = document.getElementById('entry-pig-id').value;
   const betrag = document.getElementById('entry-betrag').value;
   const beschreibung = document.getElementById('entry-beschreibung').value;
+  const kategorie_id = document.getElementById('entry-kategorie').value;
   try {
-    await api('POST', `/api/sparschweine/${pigId}/eintraege`, { betrag, beschreibung });
-    closeModal('modal-entry'); toast('Gebucht'); await load();
+    const updated = await api('POST', `/api/sparschweine/${currentPigId}/eintraege`, { betrag, beschreibung, kategorie_id });
+    const idx = pigs.findIndex(x => x.id === updated.id);
+    if (idx >= 0) pigs[idx] = updated;
+    closeModal('modal-entry'); toast('Gebucht');
+    renderDetail(updated); render();
   } catch (e) { toast(e.message); }
 }
 
-function openSettings() { openModal('modal-settings'); }
+// ─── Kategorien ──────────────────────────────────────────────────────────
+function renderKatList() {
+  const list = document.getElementById('kat-list');
+  if (!kategorien.length) { list.innerHTML = '<div class="empty" style="margin-top:8px">Noch keine Kategorien.</div>'; return; }
+  list.innerHTML = kategorien.map(k => `
+    <div class="kat-row">
+      <div class="kat-dot" style="background:${k.farbe}"></div>
+      <div class="kat-name">${k.name}</div>
+      <button class="entry-del" onclick="deleteKategorie('${k.id}')">🗑️</button>
+    </div>
+  `).join('');
+}
 
-async function runImport() {
+function openKategorien() {
+  renderKatList();
+  document.getElementById('kat-name').value = '';
+  document.getElementById('kat-farbe').value = '#888888';
+  openModal('modal-kategorien');
+}
+
+async function addKategorie() {
+  const name = document.getElementById('kat-name').value;
+  const farbe = document.getElementById('kat-farbe').value;
+  if (!name.trim()) { toast('Name fehlt'); return; }
   try {
-    const r = await api('POST', '/api/import');
-    toast(`${r.importiert} Sparschweine importiert`);
-    closeModal('modal-settings'); await load();
+    await api('POST', '/api/kategorien', { name, farbe });
+    kategorien = await api('GET', '/api/kategorien');
+    document.getElementById('kat-name').value = '';
+    renderKatList();
+    toast('Kategorie angelegt');
   } catch (e) { toast(e.message); }
 }
 
-load();
+async function deleteKategorie(id) {
+  if (!confirm('Kategorie löschen? Buchungen bleiben erhalten, verlieren aber die Zuordnung.')) return;
+  await api('DELETE', `/api/kategorien/${id}`);
+  kategorien = await api('GET', '/api/kategorien');
+  renderKatList();
+  await loadAll();
+}
+
+// ─── Statistik ───────────────────────────────────────────────────────────
+async function openStats() {
+  const rows = await api('GET', '/api/statistik');
+  const list = document.getElementById('stats-list');
+  const empty = document.getElementById('stats-empty');
+  empty.style.display = rows.length ? 'none' : 'block';
+  const max = Math.max(1, ...rows.map(r => Math.abs(r.summe)));
+  list.innerHTML = rows.map(r => `
+    <div class="stat-row">
+      <div class="stat-head">
+        <span>${r.name}</span>
+        <span>${r.summe.toFixed(2)} €</span>
+      </div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${Math.round(Math.abs(r.summe)/max*100)}%;background:${r.farbe}"></div></div>
+      <div class="stat-sub">${r.anzahl} Buchung(en) · +${r.einzahlungen.toFixed(2)} € / -${r.abhebungen.toFixed(2)} €</div>
+    </div>
+  `).join('');
+  document.getElementById('view-main').style.display = 'none';
+  document.getElementById('view-stats').style.display = 'block';
+}
+function closeStats() {
+  document.getElementById('view-stats').style.display = 'none';
+  document.getElementById('view-main').style.display = 'block';
+}
+
+loadAll();
 </script>
 </body>
 </html>

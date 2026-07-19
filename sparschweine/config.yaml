@@ -1,6 +1,6 @@
 name: "Sparschweine"
-description: "Self-hosted savings jars with goal tracking - deposits, withdrawals, progress"
-version: "0.1.0"
+description: "Self-hosted savings jars with categories, goal tracking and stats"
+version: "0.2.0"
 slug: "sparschweine"
 init: false
 arch:
@@ -11,9 +11,5 @@ ingress: true
 ingress_port: 3003
 panel_icon: mdi:piggy-bank
 webui: "http://[HOST]:[PORT:3003]/"
-options:
-  finanzapp_url: "http://192.168.178.114:3007"
-  finanzapp_pin: ""
-schema:
-  finanzapp_url: "str?"
-  finanzapp_pin: "str?"
+options: {}
+schema: {}
