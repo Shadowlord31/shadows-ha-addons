@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sparschweine</title>
+<script>window.__BASE__="__INGRESS_BASE__";</script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, Roboto, sans-serif;
+    background: #121212; color: #eee; padding: 16px; padding-bottom: 80px;
+  }
+  h1 { font-size: 1.4rem; margin: 4px 0 16px; display: flex; justify-content: space-between; align-items: center; }
+  .gear { background: none; border: none; color: #aaa; font-size: 1.3rem; cursor: pointer; }
+  .grid { display: grid; gap: 12px; }
+  .card {
+    background: #1e1e1e; border-radius: 14px; padding: 14px 16px;
+    border-left: 6px solid var(--farbe, #4CAF50);
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .card-name { font-weight: 600; font-size: 1.05rem; }
+  .card-stand { font-weight: 700; font-size: 1.1rem; }
+  .bar-bg { background: #333; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--farbe, #4CAF50); }
+  .card-ziel { font-size: 0.8rem; color: #999; margin-top: 4px; }
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; }
+  button.action {
+    flex: 1; padding: 8px; border-radius: 8px; border: none;
+    background: #2a2a2a; color: #eee; font-size: 0.9rem;
+  }
+  .fab {
+    position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px;
+    border-radius: 50%; background: #4CAF50; border: none; color: white;
+    font-size: 1.8rem; box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    display: none; align-items: flex-end; justify-content: center; z-index: 10;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #1e1e1e; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0;
+    padding: 20px; padding-bottom: 32px;
+  }
+  .modal h2 { margin-top: 0; font-size: 1.1rem; }
+  .modal input { width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px; border: 1px solid #444; background: #121212; color: #eee; font-size: 1rem; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 1rem; }
+  .btn-primary { background: #4CAF50; color: white; }
+  .btn-secondary { background: #333; color: #eee; }
+  .btn-danger { background: #b23c3c; color: white; }
+  .empty { text-align: center; color: #888; margin-top: 60px; }
+  .hint { font-size: 0.8rem; color: #888; margin-top: 4px; }
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: #333; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
+    opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <h1>🐷 Sparschweine <button class="gear" onclick="openSettings()">⚙️</button></h1>
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">Noch keine Sparschweine. Leg eins an, oder importiere aus der Finanz-App (Zahnrad).</div>
+
+  <button class="fab" onclick="openNewPig()">+</button>
+
+  <div class="modal-bg" id="modal-pig">
+    <div class="modal">
+      <h2 id="pig-modal-title">Neues Sparschwein</h2>
+      <input type="hidden" id="pig-id">
+      <label>Name</label>
+      <input type="text" id="pig-name" placeholder="z.B. Urlaub">
+      <label>Zielbetrag (optional)</label>
+      <input type="number" id="pig-ziel" placeholder="z.B. 500" step="0.01">
+      <label>Farbe</label>
+      <input type="color" id="pig-farbe" value="#4CAF50">
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-pig')">Abbrechen</button>
+        <button class="btn-primary" onclick="savePig()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="modal-entry">
+    <div class="modal">
+      <h2>Buchen</h2>
+      <input type="hidden" id="entry-pig-id">
+      <label>Betrag (negativ = Abheben)</label>
+      <input type="number" id="entry-betrag" step="0.01" placeholder="z.B. 20 oder -10">
+      <label>Beschreibung (optional)</label>
+      <input type="text" id="entry-beschreibung" placeholder="z.B. Trinkgeld">
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-entry')">Abbrechen</button>
+        <button class="btn-primary" onclick="saveEntry()">Buchen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="modal-settings">
+    <div class="modal">
+      <h2>Import aus der Finanz-App</h2>
+      <p class="hint">URL &amp; PIN werden in den Addon-Einstellungen (Home Assistant → Add-ons → Sparschweine → Konfiguration) hinterlegt, nicht hier.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-settings')">Schließen</button>
+        <button class="btn-danger" onclick="runImport()">Jetzt importieren</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+let pigs = [];
+const base = () => window.__BASE__ || '';
+
+async function api(method, url, body) {
+  const res = await fetch(base() + url, {
+    method, headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+  return res.json();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function load() {
+  pigs = await api('GET', '/api/sparschweine');
+  render();
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  grid.innerHTML = '';
+  empty.style.display = pigs.length ? 'none' : 'block';
+
+  for (const p of pigs) {
+    const pct = p.zielbetrag ? Math.min(100, Math.round((p.kontostand / p.zielbetrag) * 100)) : null;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--farbe', p.farbe);
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-name">${p.name}</span>
+        <span class="card-stand">${p.kontostand.toFixed(2)} €</span>
+      </div>
+      ${p.zielbetrag ? `
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="card-ziel">${pct}% von ${p.zielbetrag.toFixed(2)} €</div>
+      ` : ''}
+      <div class="card-actions">
+        <button class="action" onclick="openEntry('${p.id}')">💰 Buchen</button>
+        <button class="action" onclick="openEditPig('${p.id}')">✏️ Bearbeiten</button>
+        <button class="action" onclick="deletePig('${p.id}')">🗑️</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function openNewPig() {
+  document.getElementById('pig-modal-title').textContent = 'Neues Sparschwein';
+  document.getElementById('pig-id').value = '';
+  document.getElementById('pig-name').value = '';
+  document.getElementById('pig-ziel').value = '';
+  document.getElementById('pig-farbe').value = '#4CAF50';
+  openModal('modal-pig');
+}
+
+function openEditPig(id) {
+  const p = pigs.find(x => x.id === id);
+  document.getElementById('pig-modal-title').textContent = 'Sparschwein bearbeiten';
+  document.getElementById('pig-id').value = p.id;
+  document.getElementById('pig-name').value = p.name;
+  document.getElementById('pig-ziel').value = p.zielbetrag ?? '';
+  document.getElementById('pig-farbe').value = p.farbe;
+  openModal('modal-pig');
+}
+
+async function savePig() {
+  const id = document.getElementById('pig-id').value;
+  const name = document.getElementById('pig-name').value;
+  const zielbetrag = document.getElementById('pig-ziel').value;
+  const farbe = document.getElementById('pig-farbe').value;
+  try {
+    if (id) await api('PUT', `/api/sparschweine/${id}`, { name, zielbetrag, farbe });
+    else await api('POST', '/api/sparschweine', { name, zielbetrag, farbe });
+    closeModal('modal-pig'); toast('Gespeichert'); await load();
+  } catch (e) { toast(e.message); }
+}
+
+async function deletePig(id) {
+  if (!confirm('Sparschwein wirklich löschen?')) return;
+  await api('DELETE', `/api/sparschweine/${id}`);
+  toast('Gelöscht'); await load();
+}
+
+function openEntry(pigId) {
+  document.getElementById('entry-pig-id').value = pigId;
+  document.getElementById('entry-betrag').value = '';
+  document.getElementById('entry-beschreibung').value = '';
+  openModal('modal-entry');
+}
+
+async function saveEntry() {
+  const pigId = document.getElementById('entry-pig-id').value;
+  const betrag = document.getElementById('entry-betrag').value;
+  const beschreibung = document.getElementById('entry-beschreibung').value;
+  try {
+    await api('POST', `/api/sparschweine/${pigId}/eintraege`, { betrag, beschreibung });
+    closeModal('modal-entry'); toast('Gebucht'); await load();
+  } catch (e) { toast(e.message); }
+}
+
+function openSettings() { openModal('modal-settings'); }
+
+async function runImport() {
+  try {
+    const r = await api('POST', '/api/import');
+    toast(`${r.importiert} Sparschweine importiert`);
+    closeModal('modal-settings'); await load();
+  } catch (e) { toast(e.message); }
+}
+
+load();
+</script>
+</body>
+</html>

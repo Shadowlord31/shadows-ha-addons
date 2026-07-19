@@ -15,6 +15,10 @@ per-user holidays. Login via Home Assistant Ingress (no separate password). Comp
 integration for entities and services: [ha-shift-planner](https://github.com/Shadowlord31/ha-shift-planner).
 Migrated from the standalone [dienstplan](https://github.com/Shadowlord31/dienstplan) app.
 
+### [Sparschweine](./sparschweine)
+Self-hosted savings jars with goal tracking. Deposits, withdrawals, progress bars.
+Optional one-time or repeatable import from the [finanz-app](https://github.com/Shadowlord31/finanz-app).
+
 ## Installation
 
 1. In Home Assistant, go to **Settings > Add-ons > Add-on Store**
