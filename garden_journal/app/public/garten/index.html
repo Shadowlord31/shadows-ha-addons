@@ -138,7 +138,7 @@
     .month-bar.has-harvest{background:linear-gradient(var(--green-pale) 50%,var(--harvest-pale) 50%)}
     .month-label{font-size:.6rem;color:var(--text-muted);font-weight:700}
     .top-plants-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
-    .plant-chip{background:var(--white);border:1px solid var(--cream-dark);border-radius:10px;padding:14px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .plant-chip{background:var(--white);border:1px solid var(--cream-dark);border-radius:10px;padding:14px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06);min-width:0;overflow-wrap:break-word;word-break:break-word}
     .plant-chip-emoji{font-size:1.6rem;display:block;margin-bottom:4px}
     .plant-chip-name{font-size:.8rem;font-weight:700;color:var(--text)}.plant-chip-count{font-size:.75rem;color:var(--text-muted)}
     .planner-add-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -2201,7 +2201,7 @@ function renderErntemengenDetail(year){
       else if(diff>0){cmp='<div style="font-size:.78rem;color:#27ae60">\u25b2 +'+diffLabel+' gg\u00fcber '+(year-1)+'</div>';}
       else{cmp='<div style="font-size:.78rem;color:#c0392b">\u25bc -'+diffLabel+' gg\u00fcber '+(year-1)+'</div>';}
     }
-    return '<div class="plant-chip" style="text-align:left;min-width:180px">'
+    return '<div class="plant-chip" style="text-align:left">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
       +'<span style="font-size:1.3rem">'+(g.emoji||'\u{1F331}')+'</span>'
       +'<div style="font-weight:700;color:var(--green-deep)">'+esc(g.name)+'</div>'

@@ -180,3 +180,14 @@
   dieselbe Cream-Farbe hatten. Karten-Hintergrund auf Weiss umgestellt (plus
   leichter Schatten), damit sich die Karten sichtbar vom Hintergrund und
   voneinander abheben
+
+## 0.4.12
+
+- Fix (echte Ursache): Bekanntes CSS-Grid-Problem - Elemente haben standardmaessig
+  min-width:auto, wodurch laengerer Inhalt (z.B. die neue Vorjahresvergleich-Zeile
+  "+X kg gegenueber JAHR") die Karte ueber ihre Grid-Spalte hinaus aufblaehte statt
+  umzubrechen. Das sah wie echtes Ueberlappen der Karten aus
+- Ursache verschaerft durch ein zusaetzliches inline min-width:180px auf jeder
+  Karte, das den vorherigen min-width:0-Fix in v0.4.11 komplett aushebelte
+  (Inline-Styles haben Vorrang vor CSS-Klassen) - dieses inline min-width ist
+  jetzt entfernt, Text bricht bei Bedarf sauber um
