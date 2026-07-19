@@ -166,3 +166,9 @@
   zusammengerechneter Gesamtmenge (g/kg werden vereinheitlicht statt wie bisher
   als getrennte Zeilen pro Einheit angezeigt), Anzahl Teilernten, ob final
   geerntet, und Vergleich mit dem Vorjahr (falls Daten vorhanden)
+
+## 0.4.10
+
+- Erntemengen-Karten: mehr Innenabstand (10px -> 14px/16px) und mehr Abstand
+  zwischen Kachel-Zeilen sowie zwischen den Kacheln im Grid (10px -> 14px) - war
+  zu eng beieinander
