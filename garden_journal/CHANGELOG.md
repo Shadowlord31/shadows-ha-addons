@@ -141,3 +141,11 @@
   Beet aktiv waechst; "Final geerntet" kann parallel dazu erscheinen, wenn ein
   anderes Beet schon fertig ist
 - Ernte-Statistiken (Mengen) bleiben bewusst unveraendert beet-unabhaengig
+
+## 0.4.7
+
+- Neu: Export/Import zwischen zwei Add-on-Instanzen (GET /garten/api/admin/export,
+  POST /garten/api/admin/import) - fuer Kopieren der kompletten Datenbank
+  von einer Instanz auf eine andere (z.B. Hauptinstanz -> Testinstanz)
+- Lokal getestet: Export/Import zwischen zwei Containern, Beete und
+  Belegung (inkl. aller Verknuepfungen) 1:1 identisch nach dem Transfer

@@ -1,6 +1,6 @@
 name: "Garden Journal"
 description: "Self-hosted garden journal - track beds, plantings, harvests, perennials, planning and costs"
-version: "0.4.6"
+version: "0.4.7"
 slug: "garden_journal"
 init: false
 arch:

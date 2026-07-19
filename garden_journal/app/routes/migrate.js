@@ -102,4 +102,53 @@ router.post('/migrate/postgres', async (req, res) => {
   }
 });
 
+// Export/Import zwischen zwei Add-on-Instanzen (z.B. Hauptinstanz -> Testinstanz)
+const EXPORT_TABLES = [
+  'plant_families', 'plants', 'plant_categories', 'plant_blocklist',
+  'beds', 'perennials', 'plans', 'entries', 'kosten_kategorien', 'costs'
+];
+
+router.get('/export', (req, res) => {
+  try {
+    const data = {};
+    for (const t of EXPORT_TABLES) {
+      data[t] = db.prepare(`SELECT * FROM ${t}`).all();
+    }
+    res.json({ ok: true, exported_at: new Date().toISOString(), data });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/import', (req, res) => {
+  const { data } = req.body || {};
+  if (!data) return res.status(400).json({ error: 'data erforderlich (Export einer anderen Instanz)' });
+  const counts = {};
+  try {
+    db.pragma('foreign_keys = OFF');
+    const delTx = db.transaction(() => {
+      for (const t of [...EXPORT_TABLES].reverse()) db.prepare(`DELETE FROM ${t}`).run();
+    });
+    delTx();
+
+    for (const t of EXPORT_TABLES) {
+      const rows = data[t] || [];
+      if (!rows.length) { counts[t] = 0; continue; }
+      const cols = Object.keys(rows[0]);
+      const placeholders = cols.map(() => '?').join(',');
+      const stmt = db.prepare(`INSERT INTO ${t} (${cols.join(',')}) VALUES (${placeholders})`);
+      const insTx = db.transaction(() => {
+        for (const row of rows) stmt.run(cols.map(c => row[c]));
+      });
+      insTx();
+      counts[t] = rows.length;
+    }
+    db.pragma('foreign_keys = ON');
+    res.json({ ok: true, counts });
+  } catch (e) {
+    try { db.pragma('foreign_keys = ON'); } catch (_) {}
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
