@@ -811,6 +811,10 @@ function getPlantGroups(q,bedId){
   return{groups:groups,order:order};
 }
 
+function isPlantingActive(planted,harvests){
+  return !harvests.some(function(h){return h.harvest_final&&h.bed_id===planted.bed_id&&h.date>=planted.date;});
+}
+
 function renderPlantsTabInner(q,bedId,cont,countEl){
   var res=getPlantGroups(q,bedId);
   var order=res.order,groups=res.groups;
@@ -821,7 +825,8 @@ function renderPlantsTabInner(q,bedId,cont,countEl){
     var g=groups[k];
     var badges=[];
     if(g.planned.length)badges.push('<span class="pt-badge pt-badge-planned">&#128197; Geplant</span>');
-    if(g.planted.length)badges.push('<span class="pt-badge pt-badge-planted">&#127809; Gepflanzt</span>');
+    var activePlanted=g.planted.filter(function(p){return isPlantingActive(p,g.harvests);});
+    if(activePlanted.length)badges.push('<span class="pt-badge pt-badge-planted">&#127809; Gepflanzt</span>');
     var teil=g.harvests.filter(function(h){return !h.harvest_final;}).length;
     if(teil)badges.push('<span class="pt-badge pt-badge-harvest">&#127806; '+teil+'x Teilernte</span>');
     if(g.harvests.some(function(h){return h.harvest_final;}))badges.push('<span class="pt-badge pt-badge-final">&#10004; Final geerntet</span>');

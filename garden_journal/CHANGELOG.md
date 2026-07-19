@@ -129,3 +129,15 @@
   bei Ernten kein plant_id mit, wodurch die Ernte im Tagebuch als eigene, lose
   Namens-Gruppe erschien statt sich mit der bestehenden katalog-verknuepften
   Pflanzung zu vereinen. plant_id wird jetzt in beiden Occupancy-Zweigen mitgeliefert
+
+## 0.4.6
+
+- Fix: Pflanzen-Tab-Badge "Gepflanzt" ignorierte bisher, ob eine konkrete Pflanzung
+  in ihrem Beet schon final geerntet wurde. Bei einer Pflanze in mehreren Beeten
+  blieb "Gepflanzt" faelschlich bestehen, auch wenn alle Beete bereits final
+  abgeerntet waren
+- Jede Pflanzung wird jetzt einzeln pro Beet bewertet (wie /beds/occupancy es
+  schon macht) - "Gepflanzt" zeigt nur noch, wenn wirklich noch mindestens ein
+  Beet aktiv waechst; "Final geerntet" kann parallel dazu erscheinen, wenn ein
+  anderes Beet schon fertig ist
+- Ernte-Statistiken (Mengen) bleiben bewusst unveraendert beet-unabhaengig
