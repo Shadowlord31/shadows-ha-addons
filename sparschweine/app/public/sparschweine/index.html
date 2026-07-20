@@ -20,6 +20,7 @@
     background: #1e1e1e; border-radius: 14px; padding: 14px 16px;
     border-left: 6px solid var(--farbe, #4CAF50); cursor: pointer;
   }
+  .card.general { border-left-style: dashed; }
   .card-top { display: flex; justify-content: space-between; align-items: baseline; }
   .card-name { font-weight: 600; font-size: 1.05rem; }
   .card-stand { font-weight: 700; font-size: 1.1rem; }
@@ -53,7 +54,6 @@
   .btn-close { background: none; border: none; color: #aaa; font-size: 1.3rem; }
   .empty { text-align: center; color: #888; margin-top: 60px; }
 
-  /* Detailansicht */
   .detail-stand { font-size: 1.6rem; font-weight: 700; margin: 4px 0 14px; }
   .entry-list { margin-top: 14px; }
   .entry-row {
@@ -70,12 +70,10 @@
   .entry-betrag.neg { color: #e57373; }
   .entry-del { background: none; border: none; color: #666; font-size: 1rem; padding: 4px; }
 
-  /* Kategorien */
   .kat-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
   .kat-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
   .kat-name { flex: 1; }
 
-  /* Statistik */
   #view-stats { display: none; }
   .stat-row { margin-bottom: 16px; }
   .stat-head { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; }
@@ -101,7 +99,6 @@
     </span>
   </h1>
   <div id="grid" class="grid"></div>
-  <div id="empty" class="empty" style="display:none">Noch keine Sparschweine. Leg eins mit dem + an.</div>
   <button class="fab" onclick="openNewPig()">+</button>
 </div>
 
@@ -111,7 +108,6 @@
   <div id="stats-empty" class="empty" style="display:none">Noch keine Buchungen vorhanden.</div>
 </div>
 
-<!-- Modal: Neues/Bearbeiten Sparschwein -->
 <div class="modal-bg" id="modal-pig">
   <div class="modal">
     <h2 id="pig-modal-title">Neues Sparschwein</h2>
@@ -129,13 +125,12 @@
   </div>
 </div>
 
-<!-- Modal: Detailansicht eines Sparschweins -->
 <div class="modal-bg" id="modal-detail">
   <div class="modal">
     <h2><span id="detail-name"></span><button class="btn-close" onclick="closeModal('modal-detail')">✕</button></h2>
     <div class="detail-stand" id="detail-stand"></div>
     <div id="detail-progress"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" id="detail-pig-actions">
       <button class="btn-secondary" onclick="openEditPigFromDetail()">✏️ Bearbeiten</button>
       <button class="btn-danger" onclick="deletePigFromDetail()">🗑️ Löschen</button>
     </div>
@@ -146,10 +141,11 @@
   </div>
 </div>
 
-<!-- Modal: Ein-/Auszahlung -->
 <div class="modal-bg" id="modal-entry">
   <div class="modal">
     <h2>Buchen</h2>
+    <label>Sparschwein</label>
+    <select id="entry-sparschwein"><option value="">Kein Sparschwein</option></select>
     <label>Betrag (negativ = Abheben)</label>
     <input type="number" id="entry-betrag" step="0.01" placeholder="z.B. 20 oder -10">
     <label>Kategorie</label>
@@ -163,7 +159,6 @@
   </div>
 </div>
 
-<!-- Modal: Kategorien verwalten -->
 <div class="modal-bg" id="modal-kategorien">
   <div class="modal">
     <h2>Kategorien<button class="btn-close" onclick="closeModal('modal-kategorien')">✕</button></h2>
@@ -182,6 +177,8 @@
 <script>
 let pigs = [];
 let kategorien = [];
+let ohneSparschwein = { kontostand: 0, eintraege: [] };
+let currentMode = null; // 'pig' | 'general'
 let currentPigId = null;
 const base = () => window.__BASE__ || '';
 
@@ -203,15 +200,31 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 async function loadAll() {
-  [pigs, kategorien] = await Promise.all([api('GET', '/api/sparschweine'), api('GET', '/api/kategorien')]);
+  [pigs, kategorien, ohneSparschwein] = await Promise.all([
+    api('GET', '/api/sparschweine'),
+    api('GET', '/api/kategorien'),
+    api('GET', '/api/ohne-sparschwein'),
+  ]);
   render();
 }
 
 function render() {
   const grid = document.getElementById('grid');
-  const empty = document.getElementById('empty');
   grid.innerHTML = '';
-  empty.style.display = pigs.length ? 'none' : 'block';
+
+  const generalCard = document.createElement('div');
+  generalCard.className = 'card general';
+  generalCard.style.setProperty('--farbe', '#888888');
+  generalCard.onclick = () => openDetail(null);
+  generalCard.innerHTML = `
+    <div class="card-top">
+      <span class="card-name">🏷️ Ohne Sparschwein</span>
+      <span class="card-stand">${ohneSparschwein.kontostand.toFixed(2)} €</span>
+    </div>
+    <div class="card-ziel">Buchungen ohne festes Sparziel, z.B. Trinkgeld</div>
+  `;
+  grid.appendChild(generalCard);
+
   for (const p of pigs) {
     const pct = p.zielbetrag ? Math.min(100, Math.round((p.kontostand / p.zielbetrag) * 100)) : null;
     const card = document.createElement('div');
@@ -266,31 +279,38 @@ async function savePig() {
 }
 
 async function deletePigFromDetail() {
-  if (!confirm('Sparschwein wirklich löschen?')) return;
+  if (!confirm('Sparschwein löschen? Buchungen bleiben erhalten und wandern zu "Ohne Sparschwein".')) return;
   await api('DELETE', `/api/sparschweine/${currentPigId}`);
   closeModal('modal-detail'); toast('Gelöscht'); await loadAll();
 }
 
-// ─── Detailansicht ────────────────────────────────────────────────────────
-function renderDetail(p) {
-  document.getElementById('detail-name').textContent = p.name;
-  document.getElementById('detail-stand').textContent = p.kontostand.toFixed(2) + ' €';
-  document.getElementById('detail-stand').style.color = p.farbe;
+// ─── Detailansicht (Sparschwein ODER "Ohne Sparschwein") ─────────────────
+function renderDetail() {
+  const isGeneral = currentMode === 'general';
+  const data = isGeneral ? ohneSparschwein : pigs.find(x => x.id === currentPigId);
+  if (!data) return;
+
+  document.getElementById('detail-name').textContent = isGeneral ? '🏷️ Ohne Sparschwein' : data.name;
+  document.getElementById('detail-stand').textContent = data.kontostand.toFixed(2) + ' €';
+  document.getElementById('detail-stand').style.color = isGeneral ? '#888' : data.farbe;
+  document.getElementById('detail-pig-actions').style.display = isGeneral ? 'none' : 'flex';
+
   const progressEl = document.getElementById('detail-progress');
-  if (p.zielbetrag) {
-    const pct = Math.min(100, Math.round((p.kontostand / p.zielbetrag) * 100));
+  if (!isGeneral && data.zielbetrag) {
+    const pct = Math.min(100, Math.round((data.kontostand / data.zielbetrag) * 100));
     progressEl.innerHTML = `
-      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${p.farbe}"></div></div>
-      <div class="card-ziel">${pct}% von ${p.zielbetrag.toFixed(2)} €</div>`;
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${data.farbe}"></div></div>
+      <div class="card-ziel">${pct}% von ${data.zielbetrag.toFixed(2)} €</div>`;
   } else {
     progressEl.innerHTML = '';
   }
+
   const list = document.getElementById('detail-entries');
-  if (!p.eintraege.length) {
+  if (!data.eintraege.length) {
     list.innerHTML = '<div class="empty" style="margin-top:20px">Noch keine Buchungen.</div>';
     return;
   }
-  list.innerHTML = p.eintraege.map(e => `
+  list.innerHTML = data.eintraege.map(e => `
     <div class="entry-row">
       <div class="entry-dot" style="background:${e.kategorie_farbe || '#555'}"></div>
       <div class="entry-main">
@@ -304,28 +324,33 @@ function renderDetail(p) {
 }
 
 async function openDetail(id) {
+  currentMode = id ? 'pig' : 'general';
   currentPigId = id;
-  const p = pigs.find(x => x.id === id);
-  renderDetail(p);
+  renderDetail();
   openModal('modal-detail');
 }
 
 async function deleteEntry(entryId) {
   if (!confirm('Buchung löschen?')) return;
-  const updated = await api('DELETE', `/api/spareintraege/${entryId}`);
-  const idx = pigs.findIndex(x => x.id === updated.id);
-  if (idx >= 0) pigs[idx] = updated;
-  renderDetail(updated);
-  render();
+  await api('DELETE', `/api/spareintraege/${entryId}`);
+  await loadAll();
+  renderDetail();
 }
 
-// ─── Buchen ──────────────────────────────────────────────────────────────
+// ─── Buchen (mit optionaler Sparschwein-Zuordnung) ────────────────────────
 function openEntry() {
   document.getElementById('entry-betrag').value = '';
   document.getElementById('entry-beschreibung').value = '';
-  const sel = document.getElementById('entry-kategorie');
-  sel.innerHTML = '<option value="">Keine</option>' +
+
+  const katSel = document.getElementById('entry-kategorie');
+  katSel.innerHTML = '<option value="">Keine</option>' +
     kategorien.map(k => `<option value="${k.id}">${k.name}</option>`).join('');
+
+  const pigSel = document.getElementById('entry-sparschwein');
+  pigSel.innerHTML = '<option value="">Kein Sparschwein</option>' +
+    pigs.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  pigSel.value = currentMode === 'pig' ? currentPigId : '';
+
   openModal('modal-entry');
 }
 
@@ -333,12 +358,12 @@ async function saveEntry() {
   const betrag = document.getElementById('entry-betrag').value;
   const beschreibung = document.getElementById('entry-beschreibung').value;
   const kategorie_id = document.getElementById('entry-kategorie').value;
+  const sparschwein_id = document.getElementById('entry-sparschwein').value;
   try {
-    const updated = await api('POST', `/api/sparschweine/${currentPigId}/eintraege`, { betrag, beschreibung, kategorie_id });
-    const idx = pigs.findIndex(x => x.id === updated.id);
-    if (idx >= 0) pigs[idx] = updated;
+    await api('POST', '/api/eintraege', { betrag, beschreibung, kategorie_id, sparschwein_id });
     closeModal('modal-entry'); toast('Gebucht');
-    renderDetail(updated); render();
+    await loadAll();
+    renderDetail();
   } catch (e) { toast(e.message); }
 }
 

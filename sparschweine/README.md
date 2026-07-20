@@ -6,6 +6,7 @@ Eigenständiges Sparschwein-/Sparziel-Tool als Home Assistant Add-on. Eigene SQL
 ## Funktionen
 
 - Sparschweine mit Name, Farbe und optionalem Zielbetrag
+- Buchungen mit ODER OHNE Sparschwein - z.B. Trinkgeld direkt tracken, ohne es einem Sparziel zuzuordnen ("Ohne Sparschwein"-Kachel)
 - Kategorien für Buchungen (frei definierbar, mit Farbe)
 - Sparschweine sind anklickbar → Detailansicht mit allen Buchungen, Fortschrittsbalken zum Ziel
 - Ein-/Auszahlungen buchen, inkl. Kategorie-Zuordnung

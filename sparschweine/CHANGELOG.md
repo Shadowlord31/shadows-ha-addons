@@ -1,3 +1,8 @@
+## 0.3.0
+- Buchungen jetzt mit ODER ohne Sparschwein möglich (z.B. Trinkgeld direkt tracken, ohne es einem Sparziel zuzuordnen)
+- Neue Kachel "Ohne Sparschwein" in der Übersicht mit eigener Summe und Buchungsliste
+- Löschen eines Sparschweins entfernt nicht mehr dessen Buchungen, sondern verschiebt sie zu "Ohne Sparschwein"
+
 ## 0.2.0
 - Kategorien für Buchungen (anlegen/löschen, Farbe)
 - Sparschweine sind jetzt anklickbar → Detailansicht mit Buchungsliste

@@ -1,6 +1,6 @@
 name: "Sparschweine"
 description: "Self-hosted savings jars with categories, goal tracking and stats"
-version: "0.2.0"
+version: "0.3.0"
 slug: "sparschweine"
 init: false
 arch:
