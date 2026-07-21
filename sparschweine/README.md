@@ -11,6 +11,7 @@ Eigenständiges Sparschwein-/Sparziel-Tool als Home Assistant Add-on. Eigene SQL
 - Sparschweine sind anklickbar → Detailansicht mit allen Buchungen, Fortschrittsbalken zum Ziel
 - Ein-/Auszahlungen buchen, inkl. Kategorie-Zuordnung
 - Statistik-Seite mit Monatsauswahl: Summen pro Kategorie für den gewählten Monat
+- Import & Export als JSON-Datei (Backup/Restore, Übertragung auf eine andere Instanz)
 
 ## Login
 

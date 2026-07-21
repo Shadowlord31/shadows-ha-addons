@@ -178,6 +178,7 @@
     <span class="icon-btns">
       <button class="icon-btn" onclick="openStats()" title="Statistik">📊</button>
       <button class="icon-btn" onclick="openKategorien()" title="Kategorien">🏷️</button>
+      <button class="icon-btn" onclick="openDaten()" title="Import &amp; Export">💾</button>
       <button class="icon-btn" onclick="openNewPig()" title="Neues Sparschwein">🐷➕</button>
     </span>
   </h1>
@@ -279,6 +280,22 @@
     <div class="modal-actions">
       <button class="btn-primary" style="flex:none; width:100%" onclick="addKategorie()">Hinzufügen</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-daten">
+  <div class="modal">
+    <h2>Import &amp; Export<button class="btn-close" onclick="closeModal('modal-daten')">✕</button></h2>
+    <p class="card-sub" style="margin:0 0 14px">Sichert oder überträgt alle Sparschweine, Kategorien und Buchungen als Datei.</p>
+    <div class="modal-actions">
+      <button class="btn-primary" style="flex:none; width:100%" onclick="exportData()">⬇️ Als Datei exportieren</button>
+    </div>
+    <label style="margin-top:18px; display:block">Datei importieren</label>
+    <input type="file" id="import-file" accept="application/json">
+    <div class="modal-actions">
+      <button class="btn-secondary" style="flex:none; width:100%" onclick="importData()">⬆️ Importieren</button>
+    </div>
+    <p class="card-sub" style="margin-top:10px">Import ist sicher wiederholbar: bereits vorhandene Einträge (per ID) werden übersprungen, nichts wird überschrieben oder gelöscht.</p>
   </div>
 </div>
 
@@ -396,7 +413,44 @@ async function savePig() {
   try {
     if (id) await api('PUT', `/api/sparschweine/${id}`, { name, zielbetrag, farbe });
     else await api('POST', '/api/sparschweine', { name, zielbetrag, farbe });
-    closeModal('modal-pig'); toast('Gespeichert'); await loadAll();
+    closeModal('modal-pig'); toast('Gespeichert'); await // ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
+    await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+}
+
+loadAll();
     if (id && currentMode === 'pig') renderDetail();
   } catch (e) { toast(e.message); }
 }
@@ -404,7 +458,44 @@ async function savePig() {
 async function deletePigFromDetail() {
   if (!confirm('Sparschwein löschen? Buchungen bleiben erhalten und wandern zu "Ohne Sparschwein".')) return;
   await api('DELETE', `/api/sparschweine/${currentPigId}`);
-  toast('Gelöscht'); await loadAll(); closeDetail();
+  toast('Gelöscht'); await // ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
+    await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+}
+
+loadAll(); closeDetail();
 }
 
 // ─── Detailseite (Sparschwein ODER "Ohne Sparschwein") ────────────────────
@@ -462,7 +553,44 @@ function closeDetail() {
 async function deleteEntry(entryId) {
   if (!confirm('Buchung löschen?')) return;
   await api('DELETE', `/api/spareintraege/${entryId}`);
-  await loadAll();
+  await // ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
+    await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+}
+
+loadAll();
   renderDetail();
 }
 
@@ -497,7 +625,44 @@ async function saveEntry() {
   try {
     await api('POST', '/api/eintraege', { betrag, beschreibung, kategorie_id, sparschwein_id });
     closeModal('modal-entry'); toast('Gebucht');
+    await // ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
     await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+}
+
+loadAll();
     if (document.getElementById('view-detail').style.display === 'block') renderDetail();
   } catch (e) { toast(e.message); }
 }
@@ -540,7 +705,44 @@ async function deleteKategorie(id) {
   await api('DELETE', `/api/kategorien/${id}`);
   kategorien = await api('GET', '/api/kategorien');
   renderKatList();
-  await loadAll();
+  await // ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
+    await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+}
+
+loadAll();
 }
 
 // ─── Statistik (mit Monatsauswahl) ────────────────────────────────────────
@@ -620,12 +822,86 @@ async function renderStatDetail() {
 async function deleteStatEntry(entryId) {
   if (!confirm('Buchung löschen?')) return;
   await api('DELETE', `/api/spareintraege/${entryId}`);
-  await loadAll();
+  await // ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
+    await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
+}
+
+loadAll();
   await renderStatDetail();
 }
 
 function closeStatDetail() {
   showView('view-stats');
+}
+
+// ─── Import & Export ───────────────────────────────────────────────────────
+function openDaten() {
+  document.getElementById('import-file').value = '';
+  openModal('modal-daten');
+}
+
+async function exportData() {
+  try {
+    const data = await api('GET', '/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const datum = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${datum}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast(e.message); }
+}
+
+async function importData() {
+  const input = document.getElementById('import-file');
+  const file = input.files[0];
+  if (!file) { toast('Bitte eine Datei auswählen'); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('POST', '/api/bulk-import', data);
+    toast(`Importiert: ${result.sparschweine} Sparschweine, ${result.kategorien} Kategorien, ${result.eintraege} Buchungen`);
+    closeModal('modal-daten');
+    await loadAll();
+  } catch (e) { toast('Import fehlgeschlagen: ' + e.message); }
 }
 
 loadAll();

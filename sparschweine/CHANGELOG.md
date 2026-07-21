@@ -1,3 +1,8 @@
+## 0.6.0
+- Import- & Export-Funktion (Zahnrad-Symbol 💾): Export als JSON-Datei (Backup, Uebertragung auf andere Instanz), Import per Datei-Upload
+- Import ist idempotent - bereits vorhandene Eintraege (per ID) werden uebersprungen, kein Ueberschreiben/Duplizieren
+- Interner Umbau: routes/import.js -> routes/data.js (Import und Export im selben Modul)
+
 ## 0.5.0
 - Statistik-Kategorien sind jetzt anklickbar: zeigt die Buchungen der Kategorie im aktuell gewaehlten Monat (inkl. zugehoerigem Sparschwein), als eigene Seite mit Loeschen-Option
 

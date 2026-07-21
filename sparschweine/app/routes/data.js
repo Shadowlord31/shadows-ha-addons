@@ -3,10 +3,28 @@ const db = require('../db/sparschweine');
 
 const router = express.Router();
 
-// Generischer Einmal-Import: nimmt Kategorien/Sparschweine/Buchungen im
-// Request-Body entgegen und schreibt sie idempotent (INSERT OR IGNORE per ID)
-// in die eigene DB. Ruft selbst nichts extern ab - keine Kopplung an andere
-// Systeme, einfach ein Werkzeug fuer einmalige Datenuebernahmen.
+// Vollstaendiger Export: alle Sparschweine, Kategorien und Buchungen als JSON.
+// Format ist identisch zum Import-Body, damit ein Export direkt wieder
+// eingespielt werden kann (Backup/Restore, Uebertragung auf eine andere
+// Instanz).
+router.get('/api/export', (req, res) => {
+  const kategorien = db.prepare('SELECT * FROM kategorien ORDER BY erstellt_am').all();
+  const sparschweine = db.prepare('SELECT * FROM sparschweine ORDER BY erstellt_am').all();
+  const eintraege = db.prepare('SELECT id, sparschwein_id, kategorie_id, datum, betrag, beschreibung, erstellt_am FROM spareintraege ORDER BY erstellt_am').all();
+
+  res.json({
+    version: 1,
+    exported_at: new Date().toISOString(),
+    kategorien,
+    sparschweine,
+    eintraege,
+  });
+});
+
+// Import: nimmt Kategorien/Sparschweine/Buchungen im Request-Body entgegen
+// und schreibt sie idempotent (INSERT OR IGNORE per ID) in die eigene DB.
+// Ruft selbst nichts extern ab - keine Kopplung an andere Systeme. Nimmt
+// sowohl eigene Exporte (s.o.) als auch einmalige Datenuebernahmen entgegen.
 router.post('/api/bulk-import', (req, res) => {
   const { kategorien: kats = [], sparschweine: pigs = [], eintraege: entries = [] } = req.body;
 
