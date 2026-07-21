@@ -7,18 +7,29 @@ const router = express.Router();
 // Format ist identisch zum Import-Body, damit ein Export direkt wieder
 // eingespielt werden kann (Backup/Restore, Uebertragung auf eine andere
 // Instanz).
+// ?download=1 setzt Content-Disposition, damit der Browser eine echte
+// Datei-Downloadaktion ausloest statt die JSON-Antwort nur anzuzeigen.
+// Wichtig innerhalb von Ingress-iframes: ein per JS geklickter <a download>
+// mit blob:-URL wird dort von vielen mobilen Browsern/der HA-App stillschweigend
+// blockiert, ein normaler HTTP-Request mit diesem Header dagegen meist nicht.
 router.get('/api/export', (req, res) => {
   const kategorien = db.prepare('SELECT * FROM kategorien ORDER BY erstellt_am').all();
   const sparschweine = db.prepare('SELECT * FROM sparschweine ORDER BY erstellt_am').all();
   const eintraege = db.prepare('SELECT id, sparschwein_id, kategorie_id, datum, betrag, beschreibung, erstellt_am FROM spareintraege ORDER BY erstellt_am').all();
 
-  res.json({
+  const data = {
     version: 1,
     exported_at: new Date().toISOString(),
     kategorien,
     sparschweine,
     eintraege,
-  });
+  };
+
+  if (req.query.download) {
+    const datum = new Date().toISOString().substring(0, 10);
+    res.setHeader('Content-Disposition', `attachment; filename="sparschweine-export-${datum}.json"`);
+  }
+  res.json(data);
 });
 
 // Import: nimmt Kategorien/Sparschweine/Buchungen im Request-Body entgegen

@@ -1,3 +1,8 @@
+## 0.6.1
+- Fix: 0.6.0 hatte einen kaputten Build - eine fehlerhafte Textersetzung beim Einbauen von Import/Export hat mehrere Funktionen (Sparschwein bearbeiten, Buchungen loeschen, Kategorien loeschen) unbenutzbar gemacht. Sauber aus der letzten guten Version neu aufgebaut und alle betroffenen Funktionen erneut getestet.
+- Export-Download laeuft jetzt ueber eine echte Server-Navigation mit Content-Disposition-Header statt Blob+Klick, da Letzteres in Ingress-iframes (HA-App, mobile Browser) oft stillschweigend blockiert wird
+- Neuer Fallback "In Zwischenablage kopieren" fuer den Fall, dass der Download trotzdem nicht ausloest
+
 ## 0.6.0
 - Import- & Export-Funktion (Zahnrad-Symbol 💾): Export als JSON-Datei (Backup, Uebertragung auf andere Instanz), Import per Datei-Upload
 - Import ist idempotent - bereits vorhandene Eintraege (per ID) werden uebersprungen, kein Ueberschreiben/Duplizieren
