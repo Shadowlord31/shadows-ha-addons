@@ -288,12 +288,13 @@
     <h2>Import &amp; Export<button class="btn-close" onclick="closeModal('modal-daten')">✕</button></h2>
     <p class="card-sub" style="margin:0 0 14px">Sichert oder überträgt alle Sparschweine, Kategorien und Buchungen.</p>
     <div class="modal-actions">
-      <button class="btn-primary" style="flex:none; width:100%" onclick="exportDownload()">⬇️ Als Datei herunterladen</button>
+      <button class="btn-primary" style="flex:none; width:100%" onclick="exportData()">⬇️ Als Datei herunterladen</button>
     </div>
     <div class="modal-actions" style="margin-top:8px">
-      <button class="btn-secondary" style="flex:none; width:100%" onclick="exportCopy()">📋 In Zwischenablage kopieren</button>
+      <button class="btn-secondary" style="flex:none; width:100%" onclick="exportShowText()">👁️ Als Text anzeigen</button>
     </div>
-    <p class="card-sub" style="margin-top:6px">Falls der Download nicht startet (z.B. in der Home-Assistant-App): kopieren und in einer Text-/Notizen-App als .json speichern.</p>
+    <p class="card-sub" style="margin-top:6px">Falls der Download nicht startet (z.B. in der Home-Assistant-App): Text anzeigen, per Fingertipp alles markieren und über "Kopieren" im Auswahlmenü sichern.</p>
+    <textarea id="export-textarea" readonly style="display:none; width:100%; height:180px; margin-top:10px; font-family:monospace; font-size:0.75rem; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px;"></textarea>
     <label style="margin-top:18px; display:block">Datei importieren</label>
     <input type="file" id="import-file" accept="application/json">
     <div class="modal-actions">
@@ -652,19 +653,43 @@ function closeStatDetail() {
 // ─── Import & Export ───────────────────────────────────────────────────────
 function openDaten() {
   document.getElementById('import-file').value = '';
+  document.getElementById('export-textarea').style.display = 'none';
   openModal('modal-daten');
 }
 
-function exportDownload() {
-  window.open(base() + '/api/export?download=1', '_blank');
+// Blob + unsichtbarer <a download>-Klick: dieses Muster funktioniert nachweislich
+// auch innerhalb des Ingress-iframes (siehe Garden-Journal-Addon). window.open()
+// auf eine neue Server-URL wird dort dagegen oft als Popup blockiert.
+async function exportData() {
+  try {
+    const res = await fetch(base() + '/api/export');
+    if (!res.ok) throw new Error(res.statusText);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().substring(0, 10);
+    a.href = url;
+    a.download = `sparschweine-export-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Export heruntergeladen');
+  } catch (e) { toast('Export fehlgeschlagen: ' + e.message); }
 }
 
-async function exportCopy() {
+// Garantierter Fallback ohne Berechtigungen: Text anzeigen, per Fingertipp
+// markieren und ueber das native "Kopieren" im Auswahlmenue sichern. Die
+// Clipboard-API selbst braucht im iframe oft eine Berechtigung, die dort fehlt.
+async function exportShowText() {
   try {
     const data = await api('GET', '/api/export');
-    await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    toast('In Zwischenablage kopiert');
-  } catch (e) { toast('Kopieren fehlgeschlagen: ' + e.message); }
+    const ta = document.getElementById('export-textarea');
+    ta.value = JSON.stringify(data, null, 2);
+    ta.style.display = 'block';
+    ta.focus();
+    ta.select();
+  } catch (e) { toast('Fehler: ' + e.message); }
 }
 
 async function importData() {

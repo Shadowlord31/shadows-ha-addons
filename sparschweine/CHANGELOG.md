@@ -1,3 +1,8 @@
+## 0.6.3
+- Fix: Export-Download und Kopieren funktionierten nicht innerhalb des Ingress-iframes. window.open() (0.6.1) wird dort offenbar als Popup blockiert, die Clipboard-API (0.6.0/0.6.1) braucht Berechtigungen, die im iframe fehlen.
+- Export laeuft jetzt ueber denselben Blob+<a download>-Klick wie im Garden-Journal-Addon (dort nachweislich funktionierend)
+- Zwischenablage-Fallback ersetzt durch "Als Text anzeigen": Text erscheint in einem Feld, per Fingertipp markierbar und ueber das native Kopieren-Menue sicherbar - braucht keine Berechtigung
+
 ## 0.6.2
 - Fix: Docker-Build schlug auf dem Test-HA-Host fehl, da der Download der vorgebauten better-sqlite3-Binary (prebuild-install) getimeoutet ist und der Kompilier-Fallback (node-gyp) mangels Python im bookworm-slim-Image nicht greifen konnte. Dockerfile installiert jetzt python3/make/g++, damit der Fallback in jedem Fall funktioniert.
 
