@@ -1,3 +1,7 @@
+## 0.3.1
+- FAB (+) öffnet jetzt das gemeinsame Buchen-Modal statt "Neues Sparschwein"
+- "Neues Sparschwein" ist jetzt ein eigenes Icon in der Kopfzeile
+
 ## 0.3.0
 - Buchungen jetzt mit ODER ohne Sparschwein möglich (z.B. Trinkgeld direkt tracken, ohne es einem Sparziel zuzuordnen)
 - Neue Kachel "Ohne Sparschwein" in der Übersicht mit eigener Summe und Buchungsliste

@@ -96,10 +96,11 @@
     <span class="icon-btns">
       <button class="icon-btn" onclick="openStats()" title="Statistik">📊</button>
       <button class="icon-btn" onclick="openKategorien()" title="Kategorien">🏷️</button>
+      <button class="icon-btn" onclick="openNewPig()" title="Neues Sparschwein">🐷➕</button>
     </span>
   </h1>
   <div id="grid" class="grid"></div>
-  <button class="fab" onclick="openNewPig()">+</button>
+  <button class="fab" onclick="openGeneralEntry()">+</button>
 </div>
 
 <div id="view-stats">
@@ -338,6 +339,12 @@ async function deleteEntry(entryId) {
 }
 
 // ─── Buchen (mit optionaler Sparschwein-Zuordnung) ────────────────────────
+function openGeneralEntry() {
+  currentMode = 'general';
+  currentPigId = null;
+  openEntry();
+}
+
 function openEntry() {
   document.getElementById('entry-betrag').value = '';
   document.getElementById('entry-beschreibung').value = '';
