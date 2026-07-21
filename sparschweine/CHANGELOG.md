@@ -1,3 +1,6 @@
+## 0.6.2
+- Fix: Docker-Build schlug auf dem Test-HA-Host fehl, da der Download der vorgebauten better-sqlite3-Binary (prebuild-install) getimeoutet ist und der Kompilier-Fallback (node-gyp) mangels Python im bookworm-slim-Image nicht greifen konnte. Dockerfile installiert jetzt python3/make/g++, damit der Fallback in jedem Fall funktioniert.
+
 ## 0.6.1
 - Fix: 0.6.0 hatte einen kaputten Build - eine fehlerhafte Textersetzung beim Einbauen von Import/Export hat mehrere Funktionen (Sparschwein bearbeiten, Buchungen loeschen, Kategorien loeschen) unbenutzbar gemacht. Sauber aus der letzten guten Version neu aufgebaut und alle betroffenen Funktionen erneut getestet.
 - Export-Download laeuft jetzt ueber eine echte Server-Navigation mit Content-Disposition-Header statt Blob+Klick, da Letzteres in Ingress-iframes (HA-App, mobile Browser) oft stillschweigend blockiert wird
