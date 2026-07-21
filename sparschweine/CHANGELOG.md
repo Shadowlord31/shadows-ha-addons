@@ -1,3 +1,6 @@
+## 0.5.0
+- Statistik-Kategorien sind jetzt anklickbar: zeigt die Buchungen der Kategorie im aktuell gewaehlten Monat (inkl. zugehoerigem Sparschwein), als eigene Seite mit Loeschen-Option
+
 ## 0.4.0
 - Karten-Redesign: eigenes warmes Farbschema, groessere Sparschwein-Icons, Hover-Effekte
 - Responsives Grid: Sparschweine liegen auf breiten Displays nebeneinander statt gestapelt

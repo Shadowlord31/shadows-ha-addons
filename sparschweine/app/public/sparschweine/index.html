@@ -155,7 +155,8 @@
   .month-picker button:hover { background: var(--card-hover); }
   .month-label { font-weight: 600; font-size: 1.05rem; min-width: 140px; text-align: center; }
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; max-width: 1200px; margin: 0 auto; }
-  .stat-row { background: var(--card); border-radius: 16px; padding: 16px 18px; border: 1px solid var(--border); }
+  .stat-row { background: var(--card); border-radius: 16px; padding: 16px 18px; border: 1px solid var(--border); cursor: pointer; transition: background .12s, transform .12s; }
+  .stat-row:hover { background: var(--card-hover); transform: translateY(-2px); }
   .stat-head { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 8px; font-weight: 600; }
   .stat-bar-bg { background: var(--bg-elevated); border-radius: 6px; height: 9px; overflow: hidden; }
   .stat-bar-fill { height: 100%; border-radius: 6px; }
@@ -216,6 +217,21 @@
   </div>
   <div id="stats-list" class="stats-grid"></div>
   <div id="stats-empty" class="empty" style="display:none">Keine Buchungen in diesem Monat.</div>
+</div>
+
+<div id="view-stat-detail" class="page">
+  <button class="icon-btn back" onclick="closeStatDetail()">← Zurück</button>
+  <div class="detail-header" style="margin-top:14px">
+    <div class="detail-avatar" id="stat-detail-avatar">🏷️</div>
+    <div class="detail-title">
+      <div class="detail-name" id="stat-detail-name"></div>
+      <div class="detail-stand" id="stat-detail-month"></div>
+    </div>
+  </div>
+  <div class="entry-list">
+    <div class="entry-list-title">Buchungen</div>
+    <div id="stat-detail-entries"></div>
+  </div>
 </div>
 
 <div class="modal-bg" id="modal-pig">
@@ -295,7 +311,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 function showView(id) {
-  for (const v of ['view-main', 'view-detail', 'view-stats']) {
+  for (const v of ['view-main', 'view-detail', 'view-stats', 'view-stat-detail']) {
     document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
   }
 }
@@ -549,7 +565,7 @@ async function renderStats() {
   empty.style.display = rows.length ? 'none' : 'block';
   const max = Math.max(1, ...rows.map(r => Math.abs(r.summe)));
   list.innerHTML = rows.map(r => `
-    <div class="stat-row">
+    <div class="stat-row" onclick="openStatDetail('${r.kategorie_id || 'none'}', '${(r.name || '').replace(/'/g, "\\'")}', '${r.farbe}')">
       <div class="stat-head">
         <span>${r.name}</span>
         <span>${r.summe.toFixed(2)} €</span>
@@ -567,6 +583,49 @@ function openStats() {
 }
 function closeStats() {
   showView('view-main');
+}
+
+// ─── Statistik-Drilldown: Buchungen einer Kategorie im gewaehlten Monat ──
+let currentStatKategorie = null;
+
+async function openStatDetail(kategorieId, name, farbe) {
+  currentStatKategorie = kategorieId;
+  document.documentElement.style.setProperty('--detail-farbe', farbe);
+  document.getElementById('stat-detail-name').textContent = name;
+  document.getElementById('stat-detail-month').textContent = monthLabel(statsMonth);
+  await renderStatDetail();
+  showView('view-stat-detail');
+}
+
+async function renderStatDetail() {
+  const rows = await api('GET', `/api/statistik/eintraege?kategorie_id=${currentStatKategorie}&month=${statsMonth}`);
+  const list = document.getElementById('stat-detail-entries');
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty" style="margin-top:20px">Keine Buchungen in diesem Monat.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(e => `
+    <div class="entry-row">
+      <div class="entry-dot" style="background:${e.kategorie_farbe || '#555'}"></div>
+      <div class="entry-main">
+        <div class="entry-beschr">${e.beschreibung || (e.betrag > 0 ? 'Einzahlung' : 'Abhebung')}</div>
+        <div class="entry-kat">${e.sparschwein_name || 'Ohne Sparschwein'} · <span class="entry-datum">${e.datum}</span></div>
+      </div>
+      <div class="entry-betrag ${e.betrag > 0 ? 'pos' : 'neg'}">${e.betrag > 0 ? '+' : ''}${e.betrag.toFixed(2)} €</div>
+      <button class="entry-del" onclick="deleteStatEntry('${e.id}')">🗑️</button>
+    </div>
+  `).join('');
+}
+
+async function deleteStatEntry(entryId) {
+  if (!confirm('Buchung löschen?')) return;
+  await api('DELETE', `/api/spareintraege/${entryId}`);
+  await loadAll();
+  await renderStatDetail();
+}
+
+function closeStatDetail() {
+  showView('view-stats');
 }
 
 loadAll();

@@ -28,4 +28,36 @@ router.get('/api/statistik', (req, res) => {
   res.json(rows);
 });
 
+// Buchungen einer Kategorie (Drill-down von der Statistik-Seite).
+// ?kategorie_id=<id> oder =none fuer "Ohne Kategorie". ?month=YYYY-MM optional.
+router.get('/api/statistik/eintraege', (req, res) => {
+  const { kategorie_id, month } = req.query;
+  const monthFilter = /^\d{4}-\d{2}$/.test(month || '') ? month : null;
+
+  const conditions = [];
+  const params = [];
+  if (kategorie_id === 'none') {
+    conditions.push('e.kategorie_id IS NULL');
+  } else if (kategorie_id) {
+    conditions.push('e.kategorie_id = ?');
+    params.push(kategorie_id);
+  }
+  if (monthFilter) {
+    conditions.push("e.datum LIKE ? || '%'");
+    params.push(monthFilter);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const rows = db.prepare(`
+    SELECT e.*, k.name AS kategorie_name, k.farbe AS kategorie_farbe, s.name AS sparschwein_name
+    FROM spareintraege e
+    LEFT JOIN kategorien k ON k.id = e.kategorie_id
+    LEFT JOIN sparschweine s ON s.id = e.sparschwein_id
+    ${where}
+    ORDER BY e.datum DESC, e.erstellt_am DESC
+  `).all(...params);
+
+  res.json(rows);
+});
+
 module.exports = router;
