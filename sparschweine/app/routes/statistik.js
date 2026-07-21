@@ -3,7 +3,12 @@ const db = require('../db/sparschweine');
 
 const router = express.Router();
 
+// ?month=YYYY-MM filtert auf einen Monat (datum beginnt mit diesem Praefix).
+// Ohne Parameter: alle Buchungen (Verhalten vor 0.4.0).
 router.get('/api/statistik', (req, res) => {
+  const { month } = req.query;
+  const monthFilter = /^\d{4}-\d{2}$/.test(month || '') ? month : null;
+
   const rows = db.prepare(`
     SELECT
       k.id AS kategorie_id,
@@ -15,9 +20,11 @@ router.get('/api/statistik', (req, res) => {
       COALESCE(SUM(CASE WHEN e.betrag < 0 THEN -e.betrag ELSE 0 END), 0) AS abhebungen
     FROM spareintraege e
     LEFT JOIN kategorien k ON k.id = e.kategorie_id
+    ${monthFilter ? "WHERE e.datum LIKE ? || '%'" : ''}
     GROUP BY k.id
     ORDER BY summe DESC
-  `).all();
+  `).all(...(monthFilter ? [monthFilter] : []));
+
   res.json(rows);
 });
 

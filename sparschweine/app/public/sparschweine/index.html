@@ -6,84 +6,164 @@
 <title>Sparschweine</title>
 <script>window.__BASE__="__INGRESS_BASE__";</script>
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg: #16130f;
+    --bg-elevated: #1e1a15;
+    --card: #221d17;
+    --card-hover: #2a241c;
+    --border: #352f26;
+    --text: #f1ebe0;
+    --text-muted: #a89d8c;
+    --text-faint: #6f6555;
+    --gold: #d9a544;
+    --danger: #c0564f;
+    --pos: #6fae5c;
+    --neg: #cf6b62;
+  }
   * { box-sizing: border-box; }
   body {
-    margin: 0; font-family: -apple-system, Roboto, sans-serif;
-    background: #121212; color: #eee; padding: 16px; padding-bottom: 80px;
+    margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); padding: 20px; padding-bottom: 90px;
   }
-  h1 { font-size: 1.4rem; margin: 4px 0 16px; display: flex; justify-content: space-between; align-items: center; }
-  .icon-btns { display: flex; gap: 4px; }
-  .icon-btn { background: none; border: none; color: #aaa; font-size: 1.2rem; cursor: pointer; padding: 4px 6px; }
-  .grid { display: grid; gap: 12px; }
+  h1 {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em;
+    margin: 4px 0 20px; display: flex; justify-content: space-between; align-items: center;
+    max-width: 1200px; margin-left: auto; margin-right: auto;
+  }
+  h1 .title-row { display: flex; align-items: center; gap: 10px; }
+  .icon-btns { display: flex; gap: 2px; }
+  .icon-btn {
+    background: none; border: none; color: var(--text-muted); font-size: 1.25rem;
+    cursor: pointer; padding: 8px 10px; border-radius: 10px; transition: background .15s;
+  }
+  .icon-btn:hover { background: var(--card-hover); color: var(--text); }
+  .icon-btn.back { font-size: 1rem; font-weight: 600; color: var(--text); }
+
+  .page { max-width: 1200px; margin: 0 auto; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
   .card {
-    background: #1e1e1e; border-radius: 14px; padding: 14px 16px;
-    border-left: 6px solid var(--farbe, #4CAF50); cursor: pointer;
+    background: var(--card); border-radius: 18px; padding: 18px 20px;
+    cursor: pointer; border: 1px solid var(--border);
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    position: relative; overflow: hidden;
   }
-  .card.general { border-left-style: dashed; }
-  .card-top { display: flex; justify-content: space-between; align-items: baseline; }
-  .card-name { font-weight: 600; font-size: 1.05rem; }
-  .card-stand { font-weight: 700; font-size: 1.1rem; }
-  .bar-bg { background: #333; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--farbe, #4CAF50); }
-  .card-ziel { font-size: 0.8rem; color: #999; margin-top: 4px; }
+  .card:hover { background: var(--card-hover); transform: translateY(-2px); border-color: color-mix(in srgb, var(--farbe, var(--gold)) 40%, var(--border)); }
+  .card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--farbe, var(--gold));
+  }
+  .card.general::before { background: repeating-linear-gradient(180deg, var(--gold) 0 6px, transparent 6px 12px); }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .card-avatar {
+    width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+    background: color-mix(in srgb, var(--farbe, var(--gold)) 22%, transparent);
+  }
+  .card-name-wrap { flex: 1; min-width: 0; }
+  .card-name { font-weight: 600; font-size: 1.02rem; display: block; overflow-wrap: break-word; }
+  .card-sub { font-size: 0.75rem; color: var(--text-faint); margin-top: 2px; }
+  .card-stand { font-weight: 700; font-size: 1.35rem; margin-top: 14px; letter-spacing: -0.01em; }
+  .bar-bg { background: var(--bg-elevated); border-radius: 6px; height: 7px; margin-top: 12px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--farbe, var(--gold)); border-radius: 6px; }
+  .card-ziel { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
   .fab {
-    position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px;
-    border-radius: 50%; background: #4CAF50; border: none; color: white;
-    font-size: 1.8rem; box-shadow: 0 2px 8px rgba(0,0,0,.4);
+    position: fixed; bottom: 22px; right: 22px; width: 58px; height: 58px;
+    border-radius: 50%; background: var(--gold); border: none; color: #1a1509;
+    font-size: 1.9rem; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.45);
+    cursor: pointer; transition: transform .12s;
   }
+  .fab:hover { transform: scale(1.05); }
+
   .modal-bg {
-    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    position: fixed; inset: 0; background: rgba(0,0,0,.65);
     display: none; align-items: flex-end; justify-content: center; z-index: 10;
   }
   .modal-bg.open { display: flex; }
   .modal {
-    background: #1e1e1e; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0;
-    padding: 20px; padding-bottom: 32px; max-height: 88vh; overflow-y: auto;
+    background: var(--bg-elevated); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
+    padding: 22px; padding-bottom: 32px; max-height: 88vh; overflow-y: auto;
+    border: 1px solid var(--border); border-bottom: none;
   }
-  .modal h2 { margin-top: 0; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; }
+  .modal h2 { margin-top: 0; font-size: 1.15rem; display: flex; justify-content: space-between; align-items: center; }
+  .modal label { font-size: 0.82rem; color: var(--text-muted); }
   .modal input, .modal select {
-    width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px;
-    border: 1px solid #444; background: #121212; color: #eee; font-size: 1rem;
+    width: 100%; padding: 11px; margin: 6px 0 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 1rem;
   }
   .modal-actions { display: flex; gap: 10px; }
-  .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 1rem; }
-  .btn-primary { background: #4CAF50; color: white; }
-  .btn-secondary { background: #333; color: #eee; }
-  .btn-danger { background: #b23c3c; color: white; }
-  .btn-close { background: none; border: none; color: #aaa; font-size: 1.3rem; }
-  .empty { text-align: center; color: #888; margin-top: 60px; }
+  .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--gold); color: #1a1509; }
+  .btn-secondary { background: var(--card-hover); color: var(--text); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-close { background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; }
+  .empty { text-align: center; color: var(--text-faint); margin-top: 60px; }
 
-  .detail-stand { font-size: 1.6rem; font-weight: 700; margin: 4px 0 14px; }
-  .entry-list { margin-top: 14px; }
+  /* Detailseite */
+  #view-detail { display: none; }
+  .detail-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .detail-avatar {
+    width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 1.6rem; flex-shrink: 0;
+    background: color-mix(in srgb, var(--detail-farbe, var(--gold)) 22%, transparent);
+  }
+  .detail-title { flex: 1; min-width: 0; }
+  .detail-name { font-size: 1.3rem; font-weight: 700; }
+  .detail-stand { font-size: 1.1rem; color: var(--text-muted); margin-top: 2px; }
+  .detail-progress-wrap { max-width: 420px; margin: 18px 0; }
+  .detail-actions { display: flex; gap: 10px; margin: 18px 0 6px; flex-wrap: wrap; }
+  .detail-actions button {
+    padding: 10px 16px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 0.92rem;
+  }
+  .entry-list { margin-top: 18px; max-width: 640px; }
+  .entry-list-title { font-size: 0.85rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; }
   .entry-row {
-    display: flex; align-items: center; gap: 10px; padding: 10px 0;
-    border-bottom: 1px solid #2a2a2a;
+    display: flex; align-items: center; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--border);
   }
   .entry-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .entry-main { flex: 1; min-width: 0; }
-  .entry-kat { font-size: 0.75rem; color: #999; }
-  .entry-beschr { font-size: 0.9rem; }
-  .entry-datum { font-size: 0.7rem; color: #777; }
-  .entry-betrag { font-weight: 600; white-space: nowrap; }
-  .entry-betrag.pos { color: #4CAF50; }
-  .entry-betrag.neg { color: #e57373; }
-  .entry-del { background: none; border: none; color: #666; font-size: 1rem; padding: 4px; }
+  .entry-kat { font-size: 0.76rem; color: var(--text-faint); }
+  .entry-beschr { font-size: 0.95rem; }
+  .entry-datum { font-size: 0.72rem; color: var(--text-faint); }
+  .entry-betrag { font-weight: 700; white-space: nowrap; }
+  .entry-betrag.pos { color: var(--pos); }
+  .entry-betrag.neg { color: var(--neg); }
+  .entry-del { background: none; border: none; color: var(--text-faint); font-size: 1rem; padding: 4px; cursor: pointer; }
+  .entry-del:hover { color: var(--danger); }
 
-  .kat-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
+  .kat-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
   .kat-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
   .kat-name { flex: 1; }
 
+  /* Statistik */
   #view-stats { display: none; }
-  .stat-row { margin-bottom: 16px; }
-  .stat-head { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; }
-  .stat-bar-bg { background: #262626; border-radius: 6px; height: 10px; overflow: hidden; }
-  .stat-bar-fill { height: 100%; }
-  .stat-sub { font-size: 0.75rem; color: #888; margin-top: 3px; }
+  .month-picker {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin: 4px auto 24px; max-width: 320px;
+  }
+  .month-picker button {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+  }
+  .month-picker button:hover { background: var(--card-hover); }
+  .month-label { font-weight: 600; font-size: 1.05rem; min-width: 140px; text-align: center; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; max-width: 1200px; margin: 0 auto; }
+  .stat-row { background: var(--card); border-radius: 16px; padding: 16px 18px; border: 1px solid var(--border); }
+  .stat-head { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 8px; font-weight: 600; }
+  .stat-bar-bg { background: var(--bg-elevated); border-radius: 6px; height: 9px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 6px; }
+  .stat-sub { font-size: 0.76rem; color: var(--text-faint); margin-top: 8px; }
 
   .toast {
-    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-    background: #333; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
+    position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%);
+    background: var(--bg-elevated); border: 1px solid var(--border); padding: 10px 18px; border-radius: 10px; font-size: 0.9rem;
     opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 20;
   }
   .toast.show { opacity: 1; }
@@ -91,8 +171,9 @@
 </head>
 <body>
 
-<div id="view-main">
-  <h1>🐷 Sparschweine
+<div id="view-main" class="page">
+  <h1>
+    <span class="title-row">🐷 Sparschweine</span>
     <span class="icon-btns">
       <button class="icon-btn" onclick="openStats()" title="Statistik">📊</button>
       <button class="icon-btn" onclick="openKategorien()" title="Kategorien">🏷️</button>
@@ -100,13 +181,41 @@
     </span>
   </h1>
   <div id="grid" class="grid"></div>
-  <button class="fab" onclick="openGeneralEntry()">+</button>
+  <button class="fab" onclick="openGeneralEntry()" title="Buchen">+</button>
 </div>
 
-<div id="view-stats">
-  <h1><button class="icon-btn" onclick="closeStats()">← Zurück</button> Statistik</h1>
-  <div id="stats-list"></div>
-  <div id="stats-empty" class="empty" style="display:none">Noch keine Buchungen vorhanden.</div>
+<div id="view-detail" class="page">
+  <button class="icon-btn back" onclick="closeDetail()">← Zurück</button>
+  <div class="detail-header" style="margin-top:14px">
+    <div class="detail-avatar" id="detail-avatar">🐷</div>
+    <div class="detail-title">
+      <div class="detail-name" id="detail-name"></div>
+      <div class="detail-stand" id="detail-stand"></div>
+    </div>
+  </div>
+  <div class="detail-progress-wrap" id="detail-progress"></div>
+  <div class="detail-actions" id="detail-pig-actions">
+    <button class="btn-secondary" onclick="openEditPigFromDetail()">✏️ Bearbeiten</button>
+    <button class="btn-danger" onclick="deletePigFromDetail()">🗑️ Löschen</button>
+  </div>
+  <div class="detail-actions">
+    <button class="btn-primary" onclick="openEntry()">💰 Buchen</button>
+  </div>
+  <div class="entry-list">
+    <div class="entry-list-title">Buchungen</div>
+    <div id="detail-entries"></div>
+  </div>
+</div>
+
+<div id="view-stats" class="page">
+  <h1><button class="icon-btn back" onclick="closeStats()">← Zurück</button> Statistik</h1>
+  <div class="month-picker">
+    <button onclick="shiftStatsMonth(-1)">‹</button>
+    <span class="month-label" id="stats-month-label"></span>
+    <button onclick="shiftStatsMonth(1)">›</button>
+  </div>
+  <div id="stats-list" class="stats-grid"></div>
+  <div id="stats-empty" class="empty" style="display:none">Keine Buchungen in diesem Monat.</div>
 </div>
 
 <div class="modal-bg" id="modal-pig">
@@ -123,22 +232,6 @@
       <button class="btn-secondary" onclick="closeModal('modal-pig')">Abbrechen</button>
       <button class="btn-primary" onclick="savePig()">Speichern</button>
     </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="modal-detail">
-  <div class="modal">
-    <h2><span id="detail-name"></span><button class="btn-close" onclick="closeModal('modal-detail')">✕</button></h2>
-    <div class="detail-stand" id="detail-stand"></div>
-    <div id="detail-progress"></div>
-    <div class="modal-actions" id="detail-pig-actions">
-      <button class="btn-secondary" onclick="openEditPigFromDetail()">✏️ Bearbeiten</button>
-      <button class="btn-danger" onclick="deletePigFromDetail()">🗑️ Löschen</button>
-    </div>
-    <div class="modal-actions" style="margin-top:8px">
-      <button class="btn-primary" onclick="openEntry()">💰 Buchen</button>
-    </div>
-    <div class="entry-list" id="detail-entries"></div>
   </div>
 </div>
 
@@ -181,6 +274,7 @@ let kategorien = [];
 let ohneSparschwein = { kontostand: 0, eintraege: [] };
 let currentMode = null; // 'pig' | 'general'
 let currentPigId = null;
+let statsMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
 const base = () => window.__BASE__ || '';
 
 async function api(method, url, body) {
@@ -200,6 +294,12 @@ function toast(msg) {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+function showView(id) {
+  for (const v of ['view-main', 'view-detail', 'view-stats']) {
+    document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
+  }
+}
+
 async function loadAll() {
   [pigs, kategorien, ohneSparschwein] = await Promise.all([
     api('GET', '/api/sparschweine'),
@@ -215,14 +315,16 @@ function render() {
 
   const generalCard = document.createElement('div');
   generalCard.className = 'card general';
-  generalCard.style.setProperty('--farbe', '#888888');
   generalCard.onclick = () => openDetail(null);
   generalCard.innerHTML = `
     <div class="card-top">
-      <span class="card-name">🏷️ Ohne Sparschwein</span>
-      <span class="card-stand">${ohneSparschwein.kontostand.toFixed(2)} €</span>
+      <div class="card-avatar">🏷️</div>
+      <div class="card-name-wrap">
+        <span class="card-name">Ohne Sparschwein</span>
+        <div class="card-sub">z.B. Trinkgeld</div>
+      </div>
     </div>
-    <div class="card-ziel">Buchungen ohne festes Sparziel, z.B. Trinkgeld</div>
+    <div class="card-stand">${ohneSparschwein.kontostand.toFixed(2)} €</div>
   `;
   grid.appendChild(generalCard);
 
@@ -234,12 +336,16 @@ function render() {
     card.onclick = () => openDetail(p.id);
     card.innerHTML = `
       <div class="card-top">
-        <span class="card-name">${p.name}</span>
-        <span class="card-stand">${p.kontostand.toFixed(2)} €</span>
+        <div class="card-avatar">🐷</div>
+        <div class="card-name-wrap">
+          <span class="card-name">${p.name}</span>
+          ${p.zielbetrag ? `<div class="card-sub">Ziel: ${p.zielbetrag.toFixed(2)} €</div>` : ''}
+        </div>
       </div>
+      <div class="card-stand">${p.kontostand.toFixed(2)} €</div>
       ${p.zielbetrag ? `
         <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
-        <div class="card-ziel">${pct}% von ${p.zielbetrag.toFixed(2)} €</div>
+        <div class="card-ziel">${pct}% erreicht</div>
       ` : ''}
     `;
     grid.appendChild(card);
@@ -263,7 +369,6 @@ function openEditPigFromDetail() {
   document.getElementById('pig-name').value = p.name;
   document.getElementById('pig-ziel').value = p.zielbetrag ?? '';
   document.getElementById('pig-farbe').value = p.farbe;
-  closeModal('modal-detail');
   openModal('modal-pig');
 }
 
@@ -276,24 +381,27 @@ async function savePig() {
     if (id) await api('PUT', `/api/sparschweine/${id}`, { name, zielbetrag, farbe });
     else await api('POST', '/api/sparschweine', { name, zielbetrag, farbe });
     closeModal('modal-pig'); toast('Gespeichert'); await loadAll();
+    if (id && currentMode === 'pig') renderDetail();
   } catch (e) { toast(e.message); }
 }
 
 async function deletePigFromDetail() {
   if (!confirm('Sparschwein löschen? Buchungen bleiben erhalten und wandern zu "Ohne Sparschwein".')) return;
   await api('DELETE', `/api/sparschweine/${currentPigId}`);
-  closeModal('modal-detail'); toast('Gelöscht'); await loadAll();
+  toast('Gelöscht'); await loadAll(); closeDetail();
 }
 
-// ─── Detailansicht (Sparschwein ODER "Ohne Sparschwein") ─────────────────
+// ─── Detailseite (Sparschwein ODER "Ohne Sparschwein") ────────────────────
 function renderDetail() {
   const isGeneral = currentMode === 'general';
   const data = isGeneral ? ohneSparschwein : pigs.find(x => x.id === currentPigId);
   if (!data) return;
 
-  document.getElementById('detail-name').textContent = isGeneral ? '🏷️ Ohne Sparschwein' : data.name;
+  const farbe = isGeneral ? '#d9a544' : data.farbe;
+  document.documentElement.style.setProperty('--detail-farbe', farbe);
+  document.getElementById('detail-avatar').textContent = isGeneral ? '🏷️' : '🐷';
+  document.getElementById('detail-name').textContent = isGeneral ? 'Ohne Sparschwein' : data.name;
   document.getElementById('detail-stand').textContent = data.kontostand.toFixed(2) + ' €';
-  document.getElementById('detail-stand').style.color = isGeneral ? '#888' : data.farbe;
   document.getElementById('detail-pig-actions').style.display = isGeneral ? 'none' : 'flex';
 
   const progressEl = document.getElementById('detail-progress');
@@ -324,11 +432,15 @@ function renderDetail() {
   `).join('');
 }
 
-async function openDetail(id) {
+function openDetail(id) {
   currentMode = id ? 'pig' : 'general';
   currentPigId = id;
   renderDetail();
-  openModal('modal-detail');
+  showView('view-detail');
+}
+
+function closeDetail() {
+  showView('view-main');
 }
 
 async function deleteEntry(entryId) {
@@ -370,7 +482,7 @@ async function saveEntry() {
     await api('POST', '/api/eintraege', { betrag, beschreibung, kategorie_id, sparschwein_id });
     closeModal('modal-entry'); toast('Gebucht');
     await loadAll();
-    renderDetail();
+    if (document.getElementById('view-detail').style.display === 'block') renderDetail();
   } catch (e) { toast(e.message); }
 }
 
@@ -415,9 +527,23 @@ async function deleteKategorie(id) {
   await loadAll();
 }
 
-// ─── Statistik ───────────────────────────────────────────────────────────
-async function openStats() {
-  const rows = await api('GET', '/api/statistik');
+// ─── Statistik (mit Monatsauswahl) ────────────────────────────────────────
+function monthLabel(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+}
+
+function shiftStatsMonth(delta) {
+  const [y, m] = statsMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  statsMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  renderStats();
+}
+
+async function renderStats() {
+  document.getElementById('stats-month-label').textContent = monthLabel(statsMonth);
+  const rows = await api('GET', `/api/statistik?month=${statsMonth}`);
   const list = document.getElementById('stats-list');
   const empty = document.getElementById('stats-empty');
   empty.style.display = rows.length ? 'none' : 'block';
@@ -432,12 +558,15 @@ async function openStats() {
       <div class="stat-sub">${r.anzahl} Buchung(en) · +${r.einzahlungen.toFixed(2)} € / -${r.abhebungen.toFixed(2)} €</div>
     </div>
   `).join('');
-  document.getElementById('view-main').style.display = 'none';
-  document.getElementById('view-stats').style.display = 'block';
+}
+
+function openStats() {
+  statsMonth = new Date().toISOString().substring(0, 7);
+  renderStats();
+  showView('view-stats');
 }
 function closeStats() {
-  document.getElementById('view-stats').style.display = 'none';
-  document.getElementById('view-main').style.display = 'block';
+  showView('view-main');
 }
 
 loadAll();

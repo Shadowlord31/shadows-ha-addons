@@ -1,3 +1,9 @@
+## 0.4.0
+- Karten-Redesign: eigenes warmes Farbschema, groessere Sparschwein-Icons, Hover-Effekte
+- Responsives Grid: Sparschweine liegen auf breiten Displays nebeneinander statt gestapelt
+- Detailansicht ist jetzt eine eigene Seite statt ein Pop-up
+- Statistik-Seite mit Monatsauswahl (vor/zurueck), zeigt nur Buchungen des gewaehlten Monats
+
 ## 0.3.2
 - Neue Route POST /api/bulk-import fuer einmalige Datenuebernahmen (nimmt Kategorien/Sparschweine/Buchungen im Request entgegen, ruft selbst nichts extern ab)
 
