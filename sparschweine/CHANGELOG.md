@@ -1,3 +1,6 @@
+## 0.3.2
+- Neue Route POST /api/bulk-import fuer einmalige Datenuebernahmen (nimmt Kategorien/Sparschweine/Buchungen im Request entgegen, ruft selbst nichts extern ab)
+
 ## 0.3.1
 - FAB (+) öffnet jetzt das gemeinsame Buchen-Modal statt "Neues Sparschwein"
 - "Neues Sparschwein" ist jetzt ein eigenes Icon in der Kopfzeile
