@@ -1,3 +1,6 @@
+## 0.6.4
+- Fix: Beim ersten Oeffnen blitzten kurz Reste der Statistik-Detailseite (Zurueck-Button, Kategorie-Icon, "Buchungen"-Ueberschrift) unter der Hauptansicht durch, bis zum ersten Klick. CSS-Regel fuer #view-stat-detail fehlte (display:none), die Seite war beim ersten Laden also sichtbar statt versteckt.
+
 ## 0.6.3
 - Fix: Export-Download und Kopieren funktionierten nicht innerhalb des Ingress-iframes. window.open() (0.6.1) wird dort offenbar als Popup blockiert, die Clipboard-API (0.6.0/0.6.1) braucht Berechtigungen, die im iframe fehlen.
 - Export laeuft jetzt ueber denselben Blob+<a download>-Klick wie im Garden-Journal-Addon (dort nachweislich funktionierend)
