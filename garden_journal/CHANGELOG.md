@@ -205,6 +205,14 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.4.20
+
+- Fruchtfolge-Tab: den redundanten "Pflanzenfamilien"-Unterreiter (read-only
+  Tabelle, schlecht lesbar auf dem Handy) entfernt - die volle Verwaltung
+  gibt es weiterhin unter Einstellungen > Pflanzen & Familien
+- Stattdessen zeigt die Feld-Detailansicht bei jeder Familie jetzt direkt
+  Beispielpflanzen und Beschreibung mit an, kein Wechseln mehr noetig
+
 ## 0.4.19
 
 - Statistiken-Seite: alle Abschnitte (Aktivitaet pro Monat, Erntemengen,

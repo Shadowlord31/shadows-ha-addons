@@ -378,18 +378,10 @@
 
     <div class="page" id="page-fruchtfolge">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-        <div style="display:flex;gap:6px;background:var(--cream);border-radius:10px;padding:4px">
-          <button class="tj-tab active" id="ff-tab-rotation" onclick="switchFfTab('rotation')">&#128260; Fruchtfolge</button>
-          <button class="tj-tab" id="ff-tab-familien" onclick="switchFfTab('familien')">&#127807; Pflanzenfamilien</button>
-        </div>
-      </div>
+      <div class="card-title">&#128260; Fruchtfolge</div>
       <div id="ff-panel-rotation">
-        <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:18px">Zeigt welche Pflanzenfamilien in den letzten Jahren auf jedem Beet standen.</p>
+        <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:18px">Zeigt welche Pflanzenfamilien in den letzten Jahren auf jedem Beet standen. Familien verwalten: Einstellungen &#8250; Pflanzen &amp; Familien.</p>
         <div id="rotation-overview-container2"><div class="spinner">&#128260;</div></div>
-      </div>
-      <div id="ff-panel-familien" style="display:none">
-        <div id="families-container2"><div class="spinner">&#127807;</div></div>
       </div>
     </div>
   </div>
@@ -662,12 +654,7 @@ async function importGartenDaten(){
 }
 
 var ffActiveTab='rotation';
-function switchFfTab(t){
-  ffActiveTab=t;
-  ['rotation','familien'].forEach(x=>{var b=document.getElementById('ff-tab-'+x);if(b)b.classList.toggle('active',x===t);var p=document.getElementById('ff-panel-'+x);if(p)p.style.display=x===t?'':'none';});
-  if(t==='familien'){loadRotation();renderFamilies2();}
-  else loadRotation();
-}
+function switchFfTab(t){loadRotation();}
 function renderFamilies2(){
   var cont=document.getElementById('families-container2');if(!cont)return;
   if(!plantFamilies.length){cont.innerHTML='<div class="empty-state"><span class="big-icon">🌿</span><h3>Keine Familien</h3></div>';return;}
@@ -2210,7 +2197,16 @@ function openFfFeldDetail(bedId,name){
   if(!statuses.length){html+='<div style="color:var(--text-muted);font-size:.85rem;padding:6px 0">Keine Familien-Historie.</div>';}
   statuses.forEach(function(s){
     var badge=s.status==='blocked'?'<span class="rot-badge rot-blocked">&#128683; gesperrt</span>':s.status==='warning'?'<span class="rot-badge rot-warning">&#9203; bald</span>':'<span class="rot-badge rot-ok">&#10004; frei</span>';
-    html+='<div class="pd-row"><div class="pd-row-main"><strong>'+esc(s.family_name)+'</strong><div style="font-size:.78rem;color:var(--text-muted)">zuletzt '+s.last_year+(s.free_from?(' &middot; frei ab '+s.free_from):'')+'</div></div>'+badge+'</div>';
+    var fam=plantFamilies.find(function(p){return p.id===s.family_id;});
+    var info='';
+    if(fam&&(fam.examples||fam.description)){
+      info='<div style="font-size:.76rem;color:var(--text-muted);margin-top:2px">'
+        +(fam.examples?'&#127793; '+esc(fam.examples):'')
+        +(fam.examples&&fam.description?' &middot; ':'')
+        +(fam.description?'<span style="font-style:italic">'+esc(fam.description)+'</span>':'')
+        +'</div>';
+    }
+    html+='<div class="pd-row" style="align-items:flex-start"><div class="pd-row-main"><strong>'+esc(s.family_name)+'</strong><div style="font-size:.78rem;color:var(--text-muted)">zuletzt '+s.last_year+(s.free_from?(' &middot; frei ab '+s.free_from):'')+'</div>'+info+'</div>'+badge+'</div>';
   });
   document.getElementById('ff-feld-detail-title').innerHTML='&#127793; '+esc(name);
   document.getElementById('ff-feld-detail-body').innerHTML=html;
