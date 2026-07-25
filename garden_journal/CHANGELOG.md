@@ -204,3 +204,15 @@
   fragiler Bedingungskette - behebt das Grundproblem strukturell
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
+
+## 0.4.14
+
+- Fix: Gartenplan-Feld-Detailansicht zeigte geroderte Dauerbepflanzungen weiterhin
+  als "erntbar" mit veraltetem letzten Eintrag an. rodenPlan() legt jetzt
+  zusaetzlich einen finalen Ernte-Eintrag mit dem tatsaechlichen heutigen Datum
+  an (bisher wurde nur removed_year auf den Plan gesetzt, kein Datum/Eintrag
+  protokolliert)
+- Die Feld-Detailansicht beruecksichtigt jetzt zusaetzlich direkt den
+  removed_year-Status des Plans (nicht nur harvest_final-Eintraege), damit auch
+  schon vorhandene, auf die alte Art geroderte Daten sofort korrekt angezeigt
+  werden, ohne nachtraeglich repariert werden zu muessen

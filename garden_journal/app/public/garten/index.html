@@ -1362,8 +1362,8 @@ if(curP.length){
   html+='</div>';
 }
 if(data.entries&&data.entries.length){
-  var permPlantNames=(curP||[]).filter(p=>p.is_permanent).map(p=>p.plant.toLowerCase());
-  var plantEntries=(data.entries||[]).filter(e=>e.cat!=='harvest'&&!permPlantNames.includes((e.plant||'').toLowerCase()));
+  var allBedPermanentNames=(data.plans||[]).filter(p=>p.is_permanent).map(p=>p.plant.toLowerCase());
+  var plantEntries=(data.entries||[]).filter(e=>e.cat!=='harvest'&&!allBedPermanentNames.includes((e.plant||'').toLowerCase()));
   // Pflanzennamen die bereits endgültig geerntet wurden (anhand harvest_final Einträge)
   var finalHarvestedNames=new Set((data.entries||[]).filter(e=>e.cat==='harvest'&&e.harvest_final).map(e=>(e.plant||'').toLowerCase()));
   var latestEntry=plantEntries[0];
@@ -1382,7 +1382,8 @@ html+='<div class="gp-sec"><div class="gp-slbl">Letzter Eintrag'+(totalEntries>1
     if(e.description)html+='<div style="font-size:11px;color:#aaa">'+esc(e.description)+'</div>';
     html+='</div><div style="font-size:11px;color:#aaa;flex-shrink:0">'+ds+'</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;width:100%;justify-content:flex-end;margin-top:4px">';
-    var alreadyFinalHarvested = finalHarvestedNames.has((e.plant||'').toLowerCase());
+    var wasRodedWithoutEntry=(data.plans||[]).some(p=>p.is_permanent&&p.removed_year!=null&&p.plant.toLowerCase()===(e.plant||'').toLowerCase());
+    var alreadyFinalHarvested = finalHarvestedNames.has((e.plant||'').toLowerCase())||wasRodedWithoutEntry;
     if(!isH && !alreadyFinalHarvested)html+='<button class="bed-plant-btn" onclick="openHarvestModal('+e.id+')">&#127806; Ernte</button>';
     html+='<button class="bed-plant-btn" onclick="editEntry('+e.id+')">&#9999; Bearbeiten</button>';
     html+='<button class="bed-plant-btn" style="color:var(--red)" onclick="deleteEntry('+e.id+')">&#10005; Löschen</button>';
@@ -1871,7 +1872,22 @@ async function addPlan(){
   btn.disabled=false;btn.textContent='+ Zum Planer hinzufügen';
 }
 function togglePermanentMode(){const cb=document.getElementById('plan-permanent');const mw=document.getElementById('plan-month').closest('div').closest('div');mw.style.opacity=cb.checked?'0.4':'1';mw.querySelectorAll('select').forEach(s=>s.disabled=cb.checked);}
-async function rodenPlan(id){if(!confirm('Pflanze als gerodet markieren?'))return;try{await api('PATCH','/plans/'+id,{removed_year:planYear});const p=plans.find(p=>String(p.id)===String(id));if(p)p.removed_year=planYear;refreshGartenplan();showToast('&#127795; Gerodet');}catch(e){showToast('&#10060; Fehler')}}
+async function rodenPlan(id){
+  if(!confirm('Pflanze als gerodet markieren?'))return;
+  const p=plans.find(x=>String(x.id)===String(id));
+  if(!p)return;
+  const curYear=new Date().getFullYear();
+  const todayStr=new Date().toISOString().split('T')[0];
+  try{
+    await api('PATCH','/plans/'+id,{removed_year:curYear});
+    p.removed_year=curYear;
+    const finalEntry={id:Date.now(),emoji:p.emoji,plant:p.plant,date:todayStr,cat:'harvest',bed_id:p.bed_id,plant_id:p.plant_id||null,plant_family_id:p.plant_family_id||null,description:'Gerodet',harvest_final:true};
+    await api('POST','/entries',finalEntry);
+    entries.unshift(Object.assign({},finalEntry,{entry_date:todayStr}));
+    refreshGartenplan();
+    showToast('&#127795; Gerodet');
+  }catch(e){showToast('&#10060; Fehler')}
+}
 var editingPermId=null;function editPermanentPlan(id){const p=plans.find(x=>String(x.id)===String(id));if(!p)return;editingPermId=String(id);editingId=null;editSelectedEmoji=p.emoji;editSelectedCat='plant';document.getElementById('edit-plant').value=p.plant||'';document.getElementById('edit-date').value=p.year+'-01-01';document.getElementById('edit-location').value='';document.getElementById('edit-desc').value=p.note||'';document.getElementById('edit-plant-cat').value=p.plant_cat||'';const famSel=document.getElementById('edit-family');famSel.innerHTML='<option value="">– Keine –</option>';plantFamilies.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;famSel.appendChild(o)});famSel.value=p.plant_family_id||'';const bedSel=document.getElementById('edit-bed');buildBedSelect(bedSel,p.bed_id||'');editSelectCat('plant');const row=document.getElementById('edit-emoji-row');row.innerHTML='';EMOJIS.forEach(em=>{const btn=document.createElement('button');btn.className='emoji-btn'+(em===editSelectedEmoji?' selected':'');btn.textContent=em;btn.onclick=()=>{editSelectedEmoji=em;row.querySelectorAll('.emoji-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected')};row.appendChild(btn)});document.getElementById('edit-permanent').checked=true;document.querySelector('#edit-modal .card-title,#edit-modal div[style*=Playfair]').textContent='🌳 Dauerpflanze bearbeiten';document.getElementById('edit-modal').style.display='flex';}
 async function deletePlan(id){try{await api('DELETE','/plans/'+id);plans=plans.filter(p=>String(p.id)!==String(id));refreshGartenplan();showToast('🗑️ Gelöscht')}catch(e){showToast('❌ Fehler')}}
 async function toggleDone(id){
