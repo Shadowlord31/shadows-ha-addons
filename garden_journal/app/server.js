@@ -3,6 +3,14 @@ require("./db/garten"); // Initialisiert die SQLite-Datenbank beim Start (legt S
 
 const app = express(), PORT = process.env.PORT || 3002;
 app.use(express.json());
+// API-Antworten enthalten staendig wechselnde Daten (Eintraege, Fruchtfolge-Verlauf etc.) -
+// ohne diesen Header koennen Mobile-WebViews (z.B. HA-Companion-App) GET-Antworten im
+// HTTP-Cache behalten und zeigen dann veraltete Daten an, die auch App-/Add-on-Neustarts
+// ueberleben, weil es reines Client-Caching ist, kein Server-Zustand.
+app.use("/garten/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/garten/api", require("./routes/garten"));
 app.use("/garten/api/admin", require("./routes/migrate"));

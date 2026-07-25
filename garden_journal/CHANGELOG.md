@@ -205,6 +205,16 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.4.16
+
+- Fix: API-Antworten (/garten/api/*) hatten keinen Cache-Control-Header. Mobile
+  WebViews (z.B. HA-Companion-App) konnten GET-Antworten dadurch im HTTP-Cache
+  behalten und weiterhin veraltete Daten anzeigen (z.B. geloeschte Eintraege noch
+  im Fruchtfolge-Verlauf eines Feldes) - und zwar auch nach App-Neustart oder
+  Add-on-Neustart, weil es reines Client-Caching war, kein Server-/DB-Zustand
+- Server setzt jetzt Cache-Control: no-store auf allen /garten/api-Antworten,
+  zusaetzlich fordert der Client-Fetch explizit cache:'no-store' an
+
 ## 0.4.15
 
 - Fix: Beim Roden einer Dauerbepflanzung wurde in der Fruchtfolge-Pruefung weiterhin
