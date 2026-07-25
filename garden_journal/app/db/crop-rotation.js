@@ -8,7 +8,8 @@ function checkCropRotation(db, bedId, familyId, year) {
 
   const sameYearCount = db.prepare(`
     SELECT COUNT(*) AS c FROM (
-      SELECT id FROM plans WHERE bed_id = ? AND plant_family_id = ? AND year = ?
+      SELECT id FROM plans WHERE bed_id = ? AND plant_family_id = ?
+        AND (CASE WHEN is_permanent = 1 AND removed_year IS NOT NULL THEN removed_year ELSE year END) = ?
       UNION ALL
       SELECT id FROM entries WHERE bed_id = ? AND plant_family_id = ? AND CAST(strftime('%Y', entry_date) AS INTEGER) = ? AND cat = 'plant'
     )
@@ -20,7 +21,9 @@ function checkCropRotation(db, bedId, familyId, year) {
 
   const lastYearRow = db.prepare(`
     SELECT MAX(yr) AS last_year FROM (
-      SELECT year AS yr FROM plans WHERE bed_id = ? AND plant_family_id = ? AND year < ?
+      SELECT (CASE WHEN is_permanent = 1 AND removed_year IS NOT NULL THEN removed_year ELSE year END) AS yr
+        FROM plans WHERE bed_id = ? AND plant_family_id = ?
+        AND (CASE WHEN is_permanent = 1 AND removed_year IS NOT NULL THEN removed_year ELSE year END) < ?
       UNION ALL
       SELECT CAST(strftime('%Y', entry_date) AS INTEGER) AS yr FROM entries WHERE bed_id = ? AND plant_family_id = ? AND CAST(strftime('%Y', entry_date) AS INTEGER) < ? AND cat = 'plant'
     )

@@ -205,6 +205,17 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.4.15
+
+- Fix: Beim Roden einer Dauerbepflanzung wurde in der Fruchtfolge-Pruefung weiterhin
+  das urspruengliche Pflanzjahr als letztes Standjahr gewertet statt des Rode-Jahrs
+  (removed_year) - dadurch erschien das Beet faelschlich schon frueher wieder frei,
+  da die tatsaechliche Standzeit der Dauerbepflanzung nicht beruecksichtigt wurde
+- crop_rotation_history (View) und checkCropRotation() (Fruchtfolge-Pruefung) nutzen
+  jetzt bei geroderten Dauerbepflanzungen removed_year statt year als effektives Jahr
+- View wird beim Start jetzt per DROP+CREATE neu angelegt statt CREATE VIEW IF NOT
+  EXISTS, damit die Korrektur auch auf bestehenden Installationen sofort greift
+
 ## 0.4.14
 
 - Fix: Gartenplan-Feld-Detailansicht zeigte geroderte Dauerbepflanzungen weiterhin

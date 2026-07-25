@@ -113,11 +113,15 @@ CREATE TABLE IF NOT EXISTS costs (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE VIEW IF NOT EXISTS crop_rotation_history AS
-  SELECT p.bed_id, b.name AS bed_name, p.year AS year, p.plant AS plant_name, p.emoji,
+DROP VIEW IF EXISTS crop_rotation_history;
+CREATE VIEW crop_rotation_history AS
+  SELECT p.bed_id, b.name AS bed_name,
+         CASE WHEN p.is_permanent = 1 AND p.removed_year IS NOT NULL THEN p.removed_year ELSE p.year END AS year,
+         p.plant AS plant_name, p.emoji,
          pf.id AS family_id, pf.name AS family_name, pf.color AS family_color
   FROM plans p JOIN beds b ON b.id = p.bed_id LEFT JOIN plant_families pf ON pf.id = p.plant_family_id
-  WHERE p.year >= (CAST(strftime('%Y','now') AS INTEGER) - 4)
+  WHERE (CASE WHEN p.is_permanent = 1 AND p.removed_year IS NOT NULL THEN p.removed_year ELSE p.year END)
+        >= (CAST(strftime('%Y','now') AS INTEGER) - 4)
   UNION ALL
   SELECT e.bed_id, b.name AS bed_name, CAST(strftime('%Y', e.entry_date) AS INTEGER) AS year, e.plant AS plant_name, e.emoji,
          pf.id AS family_id, pf.name AS family_name, pf.color AS family_color
