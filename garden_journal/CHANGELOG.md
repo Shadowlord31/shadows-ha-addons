@@ -205,6 +205,14 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.4.19
+
+- Statistiken-Seite: alle Abschnitte (Aktivitaet pro Monat, Erntemengen,
+  Ausgaben nach Kategorie) sind jetzt einzeln einklappbar (Akkordeon)
+- Neuer Abschnitt "Fruchtfolge" auf der Statistiken-Seite - dieselbe
+  Feld-Liste mit Warn-Chips und Detailansicht wie im Fruchtfolge-Tab,
+  standardmaessig eingeklappt
+
 ## 0.4.18
 
 - Fruchtfolge-Tab komplett neu gestaltet fuer die Handy-Ansicht: statt des
