@@ -1363,9 +1363,11 @@ if(curP.length){
 }
 if(data.entries&&data.entries.length){
   var allBedPermanentNames=(data.plans||[]).filter(p=>p.is_permanent).map(p=>p.plant.toLowerCase());
-  var plantEntries=(data.entries||[]).filter(e=>e.cat!=='harvest'&&!allBedPermanentNames.includes((e.plant||'').toLowerCase()));
-  // Pflanzennamen die bereits endgültig geerntet wurden (anhand harvest_final Einträge)
+  // Pflanzennamen die bereits endgueltig geerntet oder (bei Dauerbepflanzung) gerodet wurden -
+  // die gehoeren nur noch in den Verlauf, nicht mehr unter "Letzter Eintrag" (die Pflanze steht ja nicht mehr im Feld)
   var finalHarvestedNames=new Set((data.entries||[]).filter(e=>e.cat==='harvest'&&e.harvest_final).map(e=>(e.plant||'').toLowerCase()));
+  var rodedNames=new Set((data.plans||[]).filter(p=>p.is_permanent&&p.removed_year!=null).map(p=>p.plant.toLowerCase()));
+  var plantEntries=(data.entries||[]).filter(e=>e.cat!=='harvest'&&!allBedPermanentNames.includes((e.plant||'').toLowerCase())&&!finalHarvestedNames.has((e.plant||'').toLowerCase())&&!rodedNames.has((e.plant||'').toLowerCase()));
   var latestEntry=plantEntries[0];
   var totalEntries=plantEntries.length;
   if(latestEntry){
@@ -1382,9 +1384,7 @@ html+='<div class="gp-sec"><div class="gp-slbl">Letzter Eintrag'+(totalEntries>1
     if(e.description)html+='<div style="font-size:11px;color:#aaa">'+esc(e.description)+'</div>';
     html+='</div><div style="font-size:11px;color:#aaa;flex-shrink:0">'+ds+'</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;width:100%;justify-content:flex-end;margin-top:4px">';
-    var wasRodedWithoutEntry=(data.plans||[]).some(p=>p.is_permanent&&p.removed_year!=null&&p.plant.toLowerCase()===(e.plant||'').toLowerCase());
-    var alreadyFinalHarvested = finalHarvestedNames.has((e.plant||'').toLowerCase())||wasRodedWithoutEntry;
-    if(!isH && !alreadyFinalHarvested)html+='<button class="bed-plant-btn" onclick="openHarvestModal('+e.id+')">&#127806; Ernte</button>';
+    if(!isH)html+='<button class="bed-plant-btn" onclick="openHarvestModal('+e.id+')">&#127806; Ernte</button>';
     html+='<button class="bed-plant-btn" onclick="editEntry('+e.id+')">&#9999; Bearbeiten</button>';
     html+='<button class="bed-plant-btn" style="color:var(--red)" onclick="deleteEntry('+e.id+')">&#10005; Löschen</button>';
     html+='</div></div>';

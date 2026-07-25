@@ -205,6 +205,16 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.4.17
+
+- Fix: Im Feld-Detail-Fenster (Gartenplan) stand eine Pflanze auch dann noch
+  unter "Letzter Eintrag", wenn sie bereits final geerntet (oder bei
+  Dauerbepflanzung gerodet) war - obwohl sie zusaetzlich schon korrekt im
+  "Verlauf" auftauchte. Damit stand sie doppelt da
+- Final geerntete bzw. geroderte Pflanzungen werden jetzt nur noch im Verlauf
+  angezeigt, "Letzter Eintrag" zeigt nur noch tatsaechlich aktuell im Feld
+  stehende (noch erntbare) Pflanzungen
+
 ## 0.4.16
 
 - Fix: API-Antworten (/garten/api/*) hatten keinen Cache-Control-Header. Mobile
