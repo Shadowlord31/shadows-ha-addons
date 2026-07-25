@@ -205,6 +205,19 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.4.18
+
+- Fruchtfolge-Tab komplett neu gestaltet fuer die Handy-Ansicht: statt des
+  horizontal scrollenden Zeitstrahl-Gantt-Diagramms jetzt eine Feld-Liste
+  (weiterhin nach Hauptbeet/Reihe gruppiert, aufklappbar)
+- Jede Feld-Karte zeigt die aktuelle Bepflanzung sowie kleine Warn-Chips fuer
+  Pflanzenfamilien, die auf diesem Feld gerade noch gesperrt sind oder deren
+  Pause bald endet (rot = gesperrt, gelb = bald wieder frei), inkl. Jahr
+- Antippen einer Feld-Karte oeffnet eine Detailansicht: chronologischer
+  Verlauf nach Jahr (mehrere Familien im selben Jahr stehen als eigene
+  Zeilen untereinander, nicht mehr als ueberlappende Balken), darunter eine
+  Familien-Status-Tabelle mit "frei ab Jahr X" je Familie
+
 ## 0.4.17
 
 - Fix: Im Feld-Detail-Fenster (Gartenplan) stand eine Pflanze auch dann noch
