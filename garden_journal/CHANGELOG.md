@@ -191,3 +191,16 @@
   Karte, das den vorherigen min-width:0-Fix in v0.4.11 komplett aushebelte
   (Inline-Styles haben Vorrang vor CSS-Klassen) - dieses inline min-width ist
   jetzt entfernt, Text bricht bei Bedarf sauber um
+
+## 0.4.13
+
+- Fix (wichtig): PATCH /plans/:id ignorierte removed_year komplett, wenn nur
+  {removed_year:X} mitgeschickt wurde (genau das, was rodenPlan() im Tagebuch
+  tut) - landete im falschen Zweig der alten Bedingungslogik, der stattdessen
+  done und plant_family_id stillschweigend zuruecksetzte, removed_year aber
+  nie speicherte. Roden von Dauerbepflanzungen wirkte dadurch wirkungslos
+- Route komplett auf robustes Merge-Verfahren umgestellt (bestehenden Datensatz
+  laden, nur mitgeschickte Felder aendern, Rest unangetastet lassen) statt
+  fragiler Bedingungskette - behebt das Grundproblem strukturell
+- Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
+  Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"

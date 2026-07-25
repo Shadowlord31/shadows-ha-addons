@@ -210,23 +210,37 @@ router.post('/plans', (req, res) => {
 });
 router.patch('/plans/:id', (req, res) => {
   try {
-    const { done, plant_family_id, emoji, plant, month, month_to, year, note, bed_id, is_permanent, removed_year, plant_cat, plant_id } = req.body;
-    let fe = emoji, fp = plant, ffi = plant_family_id;
-    if (plant_id) {
-      const pr = db.prepare('SELECT * FROM plants WHERE id=?').get(plant_id);
+    const existing = db.prepare('SELECT * FROM plans WHERE id=?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Plan nicht gefunden' });
+    const body = req.body || {};
+
+    let fe = body.emoji !== undefined ? body.emoji : existing.emoji;
+    let fp = body.plant !== undefined ? body.plant : existing.plant;
+    let ffi = body.plant_family_id !== undefined ? body.plant_family_id : existing.plant_family_id;
+    if (body.plant_id) {
+      const pr = db.prepare('SELECT * FROM plants WHERE id=?').get(body.plant_id);
       if (pr) { fe = pr.emoji; fp = pr.name; ffi = pr.plant_family_id; }
     }
-    if (plant !== undefined || plant_id !== undefined) {
-      db.prepare(`
-        UPDATE plans SET emoji=?,plant=?,month=?,month_to=?,year=?,note=?,bed_id=?,plant_family_id=?,is_permanent=?,removed_year=?,plant_cat=?,plant_id=? WHERE id=?
-      `).run(fe, fp, month || 0, month_to || month || 0, year, note || null, bed_id || null, ffi || null, b(is_permanent), removed_year || null, plant_cat || null, plant_id || null, req.params.id);
-    } else if (done !== undefined && plant_family_id === undefined) {
-      db.prepare('UPDATE plans SET done=? WHERE id=?').run(b(done), req.params.id);
-    } else if (plant_family_id !== undefined && done === undefined) {
-      db.prepare('UPDATE plans SET plant_family_id=? WHERE id=?').run(plant_family_id || null, req.params.id);
-    } else {
-      db.prepare('UPDATE plans SET done=?,plant_family_id=? WHERE id=?').run(b(done), plant_family_id || null, req.params.id);
-    }
+
+    const merged = {
+      emoji: fe,
+      plant: fp,
+      month: body.month !== undefined ? body.month : existing.month,
+      month_to: body.month_to !== undefined ? body.month_to : existing.month_to,
+      year: body.year !== undefined ? body.year : existing.year,
+      note: body.note !== undefined ? body.note : existing.note,
+      done: body.done !== undefined ? b(body.done) : existing.done,
+      bed_id: body.bed_id !== undefined ? body.bed_id : existing.bed_id,
+      plant_family_id: ffi,
+      is_permanent: body.is_permanent !== undefined ? b(body.is_permanent) : existing.is_permanent,
+      removed_year: body.removed_year !== undefined ? body.removed_year : existing.removed_year,
+      plant_cat: body.plant_cat !== undefined ? body.plant_cat : existing.plant_cat,
+      plant_id: body.plant_id !== undefined ? body.plant_id : existing.plant_id
+    };
+
+    db.prepare(`
+      UPDATE plans SET emoji=?,plant=?,month=?,month_to=?,year=?,note=?,done=?,bed_id=?,plant_family_id=?,is_permanent=?,removed_year=?,plant_cat=?,plant_id=? WHERE id=?
+    `).run(merged.emoji, merged.plant, merged.month, merged.month_to, merged.year, merged.note, merged.done, merged.bed_id, merged.plant_family_id, merged.is_permanent, merged.removed_year, merged.plant_cat, merged.plant_id, req.params.id);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

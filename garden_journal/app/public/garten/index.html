@@ -866,7 +866,11 @@ function getPlantGroups(q,bedId){
 }
 
 function isPlantingActive(planted,harvests){
-  return !harvests.some(function(h){return h.harvest_final&&h.bed_id===planted.bed_id&&h.date>=planted.date;});
+  var harvestedAway=harvests.some(function(h){return h.harvest_final&&h.bed_id===planted.bed_id&&h.date>=planted.date;});
+  if(harvestedAway)return false;
+  // Roden setzt nur removed_year auf den Plan, ohne Ernte-Eintrag - das zaehlt genauso als "nicht mehr aktiv"
+  var rodenAway=plans.some(function(p){return p.is_permanent&&p.removed_year!=null&&p.bed_id===planted.bed_id&&(planted.plant_id?p.plant_id===planted.plant_id:p.plant===planted.plant);});
+  return !rodenAway;
 }
 
 function renderPlantsTabInner(q,bedId,cont,countEl){
