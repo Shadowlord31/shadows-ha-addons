@@ -46,11 +46,12 @@ router.delete('/api/dp/shifttypes/:id', auth, (req, res) => {
 
 // ===== SHIFTS =====
 router.get('/api/dp/shifts', auth, (req, res) => {
-  const { year, month } = req.query;
+  const { year, month, from, to } = req.query;
   let q = `SELECT s.*,st.name as type_name,st.short_name,st.color,st.counts_as_work,st.default_start,st.default_end
            FROM dp_shifts s LEFT JOIN dp_shift_types st ON s.shift_type_id=st.id WHERE s.user_id=?`;
   const p = [req.dpUser.id];
-  if (year && month) { q += ` AND strftime('%Y',s.date)=? AND strftime('%m',s.date)=?`; p.push(String(year), String(month).padStart(2, '0')); }
+  if (from && to) { q += ` AND s.date>=? AND s.date<=?`; p.push(from, to); }
+  else if (year && month) { q += ` AND strftime('%Y',s.date)=? AND strftime('%m',s.date)=?`; p.push(String(year), String(month).padStart(2, '0')); }
   q += ' ORDER BY s.date';
   res.json(db.prepare(q).all(...p));
 });
@@ -150,10 +151,11 @@ router.post('/api/dp/vacations/carryover', auth, (req, res) => {
 
 // ===== WORK TIMES =====
 router.get('/api/dp/worktimes', auth, (req, res) => {
-  const { year, month } = req.query;
+  const { year, month, from, to } = req.query;
   let q = 'SELECT * FROM dp_work_times WHERE user_id=?';
   const p = [req.dpUser.id];
-  if (year && month) { q += " AND strftime('%Y',date)=? AND strftime('%m',date)=?"; p.push(String(year), String(month).padStart(2, '0')); }
+  if (from && to) { q += ' AND date>=? AND date<=?'; p.push(from, to); }
+  else if (year && month) { q += " AND strftime('%Y',date)=? AND strftime('%m',date)=?"; p.push(String(year), String(month).padStart(2, '0')); }
   q += ' ORDER BY date DESC';
   res.json(db.prepare(q).all(...p));
 });

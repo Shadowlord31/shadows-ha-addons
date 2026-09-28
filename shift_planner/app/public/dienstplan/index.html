@@ -118,7 +118,7 @@ input[type=color]{height:40px;padding:4px;cursor:pointer}
 .cc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:8px;min-height:80px;min-width:0;overflow:hidden;cursor:pointer;transition:all .15s;position:relative}
 .cc:hover{background:var(--bg4);border-color:var(--accent)}
 .cc.today{border-color:var(--accent)}
-.cc.other{opacity:.3}
+.cc.other{opacity:.55}
 .cc.weekend{background:rgba(255,255,255,.02)}
 .cc.vacday{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3)}
 .cc.holday{background:rgba(251,191,36,.06)}
@@ -643,10 +643,18 @@ function goWeek(){S.wo=0;loadDash()}
 async function loadCal(){
   const y=S.cy,m=S.cm;
   document.getElementById('mlbl').textContent=`${MO[m]} ${y}`;
-  let shifts=[];try{shifts=await api(`/api/dp/shifts?year=${y}&month=${m+1}`)}catch{}
-  let vacs=[];try{vacs=await api(`/api/dp/vacations?year=${y}`)}catch{}
-  let hols=[];try{hols=await api(`/api/dp/holidays?year=${y}`)}catch{}
-  let wts=[];try{wts=await api(`/api/dp/worktimes?year=${y}&month=${m+1}`)}catch{}
+  const first=new Date(y,m,1);const last=new Date(y,m+1,0);
+  let sd=first.getDay();sd=sd===0?6:sd-1;
+  const rangeStart=new Date(first);rangeStart.setDate(rangeStart.getDate()-sd);
+  const rem=(sd+last.getDate())%7;const trailing=rem>0?7-rem:0;
+  const rangeEnd=new Date(last);rangeEnd.setDate(rangeEnd.getDate()+trailing);
+  const rs=iso(rangeStart),re=iso(rangeEnd);
+  const years=[...new Set([rangeStart.getFullYear(),rangeEnd.getFullYear()])];
+
+  let shifts=[];try{shifts=await api(`/api/dp/shifts?from=${rs}&to=${re}`)}catch{}
+  let vacs=[];try{vacs=(await Promise.all(years.map(yr=>api(`/api/dp/vacations?year=${yr}`)))).flat()}catch{}
+  let hols=[];try{hols=(await Promise.all(years.map(yr=>api(`/api/dp/holidays?year=${yr}`)))).flat()}catch{}
+  let wts=[];try{wts=await api(`/api/dp/worktimes?from=${rs}&to=${re}`)}catch{}
 
   const sm={};shifts.forEach(s=>{sm[iso(s.date)]=s});
   const vm={};vacs.forEach(v=>{
@@ -668,13 +676,11 @@ async function loadCal(){
   };
 
   const today=iso(new Date());
-  const first=new Date(y,m,1);const last=new Date(y,m+1,0);
-  let sd=first.getDay();sd=sd===0?6:sd-1;
 
   let html=`<div class="cal-h">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<div class="cal-hd">${d}</div>`).join('')}</div><div class="cal-b">`;
-  for(let i=0;i<sd;i++){const d=new Date(first);d.setDate(d.getDate()-(sd-i));html+=`<div class="cc other"><div class="cdn">${d.getDate()}</div></div>`}
-  for(let day=1;day<=last.getDate();day++){
-    const d=new Date(y,m,day);const ds=iso(d);
+  for(let d=new Date(rangeStart);d<=rangeEnd;d.setDate(d.getDate()+1)){
+    const ds=iso(d);
+    const inMonth=d.getMonth()===m;
     const isT=ds===today,isW=d.getDay()===0||d.getDay()===6;
     const sh=sm[ds],vac=vm[ds],hol=hm[ds],wt=wtm[ds];
     const cfg=wt?wtCfg[wt.work_type]:null;
@@ -692,9 +698,8 @@ async function loadCal(){
     }
     if(hol)chips+=`<div class="chl">${hol.name}</div>`;
     if(sh?.note&&!cfg)chips+=`<div class="ndot"></div>`;
-    html+=`<div class="cc ${isT?'today':''} ${isW?'weekend':''} ${extraCls} ${hol&&!vac&&!cfg?'holday':''}" onclick="openShiftModal('${ds}')"><div class="cdn">${day}</div>${chips}</div>`;
+    html+=`<div class="cc ${inMonth?'':'other'} ${isT?'today':''} ${isW?'weekend':''} ${extraCls} ${hol&&!vac&&!cfg?'holday':''}" onclick="openShiftModal('${ds}')"><div class="cdn">${d.getDate()}</div>${chips}</div>`;
   }
-  const rem=(sd+last.getDate())%7;if(rem>0)for(let i=1;i<=7-rem;i++)html+=`<div class="cc other"><div class="cdn">${i}</div></div>`;
   html+='</div>';
   document.getElementById('calgrid').innerHTML=html;
 }
@@ -785,6 +790,13 @@ async function loadWork(){
   const y=S.wy,m=S.wm;
   document.getElementById('wmlbl').textContent=`${MO[m]} ${y}`;
   let ents=[];try{ents=await api(`/api/dp/worktimes?year=${y}&month=${m+1}`)}catch{}
+  const firstDay=new Date(y,m,1);
+  const lastDay=new Date(y,m+1,0);
+  let startDow=firstDay.getDay();startDow=startDow===0?6:startDow-1;
+  const rangeStart=new Date(firstDay);rangeStart.setDate(rangeStart.getDate()-startDow);
+  const endDow=lastDay.getDay();const trailing=endDow===0?0:7-endDow;
+  const rangeEnd=new Date(lastDay);rangeEnd.setDate(rangeEnd.getDate()+trailing);
+  let rangeEnts=[];try{rangeEnts=await api(`/api/dp/worktimes?from=${iso(rangeStart)}&to=${iso(rangeEnd)}`)}catch{}
   let tgt={target:0,days:0,hpd:0,weekly_hours:40};
   try{tgt=await api(`/api/dp/worktimes/target/${y}/${m+1}`)}catch{}
   ents.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
@@ -807,27 +819,20 @@ async function loadWork(){
     ${krankTage>0?`<div class="sc sr"><div class="sl">🤒 Krank</div><div class="sv">${krankTage}</div><div class="ss">Tage</div></div>`:''}
     ${freizeitTage>0?`<div class="sc sp"><div class="sl">🎉 Freizeitausgleich</div><div class="sv">${freizeitTage}</div><div class="ss">Tage</div></div>`:''}
     <div class="sc"><div class="sl">Ø pro Tag</div><div class="sv">${ents.length>0?(ta/ents.length).toFixed(1):0}</div><div class="ss">Stunden</div></div>`;
-  const entMap={};ents.forEach(e=>entMap[e.date]=e);
-  const firstDay=new Date(y,m,1);
-  const lastDay=new Date(y,m+1,0);
+  rangeEnts.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
+  const entMap={};rangeEnts.forEach(e=>entMap[e.date]=e);
   const todayStr=iso(new Date());
   const weeks=[];let week=[];
-  let startDow=firstDay.getDay();startDow=startDow===0?6:startDow-1;
-  for(let i=0;i<startDow;i++) week.push(null);
-  for(let d=1;d<=lastDay.getDate();d++){
-    const date=new Date(y,m,d);
-    week.push(date);
-    if(date.getDay()===0||d===lastDay.getDate()){
-      while(week.length<7) week.push(null);
-      weeks.push(week);week=[];
-    }
+  for(let d=new Date(rangeStart);d<=rangeEnd;d.setDate(d.getDate()+1)){
+    week.push(new Date(d));
+    if(week.length===7){weeks.push(week);week=[];}
   }
   document.getElementById('wtlist').innerHTML=weeks.map(week=>{
-    const wSum=week.filter(Boolean).reduce((s,d)=>{const e=entMap[iso(d)];return s+(e?parseFloat(e.actual_hours||0):0);},0);
-    const wLabel=`KW ${getKW(week.find(Boolean)||firstDay)}`;
+    const wSum=week.reduce((s,d)=>{const e=entMap[iso(d)];return s+(e?parseFloat(e.actual_hours||0):0);},0);
+    const wLabel=`KW ${getKW(week[0])}`;
     const cells=week.map(d=>{
-      if(!d) return `<div style="min-height:72px;border-radius:var(--rs)"></div>`;
       const ds=iso(d);const e=entMap[ds];
+      const inMonth=d.getMonth()===m;
       const isToday=ds===todayStr;const isWE=d.getDay()===0||d.getDay()===6;
       const ac=e?parseFloat(e.actual_hours||0):null;
       const wtype=e?.work_type||(e?.is_vacation?'vacation':'work');
@@ -850,7 +855,7 @@ async function loadWork(){
       }
       const bg=is8h?tc.bg:e?'var(--bg3)':isWE?'rgba(255,255,255,.01)':'var(--bg2)';
       const bdr=isToday?'var(--accent)':e?'var(--border)':'rgba(42,51,72,.5)';
-      return `<div style="background:${bg};border:1px solid ${bdr};border-radius:var(--rs);padding:8px 6px;min-height:72px;cursor:pointer;position:relative"
+      return `<div style="background:${bg};border:1px solid ${bdr};border-radius:var(--rs);padding:8px 6px;min-height:72px;cursor:pointer;position:relative;opacity:${inMonth?'1':'.55'}"
         data-date="${ds}" data-entry-id="${e?.id||''}"
         onclick="handleWTDayClick(this)">
         <div style="font-size:11px;font-weight:600;color:${isToday?'var(--accent)':isWE?'var(--text3)':'var(--text2)'}">${DD[d.getDay()]} ${d.getDate()}</div>
