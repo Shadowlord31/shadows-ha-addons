@@ -125,6 +125,7 @@ input[type=color]{height:40px;padding:4px;cursor:pointer}
 .cdn{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
 .cc.today .cdn{color:var(--accent)}
 .csc{display:block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cst{font-size:9px;color:var(--text2);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chl{font-size:9px;color:var(--yellow);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ndot{position:absolute;top:4px;right:4px;width:6px;height:6px;background:var(--yellow);border-radius:50%}
 
@@ -205,6 +206,7 @@ input[type=color]{height:40px;padding:4px;cursor:pointer}
   .cc{min-height:56px;padding:3px 2px;min-width:0}
   .cdn{font-size:10px;margin-bottom:2px}
   .csc{padding:1px 3px;font-size:9px}
+  .cst{font-size:7px}
   .chl{font-size:7px}
   .stats{grid-template-columns:repeat(2,1fr)}
   .set-grid{grid-template-columns:1fr}
@@ -684,7 +686,9 @@ async function loadCal(){
       chips+=`<span class="csc" style="background:#34d399">Urlaub</span>`;
       extraCls='vacday';
     } else if(sh?.type_name){
+      const st1=sh.actual_start||sh.default_start,en1=sh.actual_end||sh.default_end;
       chips+=`<span class="csc" style="background:${sh.color}">${sh.short_name}</span>`;
+      if(st1&&en1)chips+=`<div class="cst">${st1.slice(0,5)}–${en1.slice(0,5)}</div>`;
     }
     if(hol)chips+=`<div class="chl">${hol.name}</div>`;
     if(sh?.note&&!cfg)chips+=`<div class="ndot"></div>`;
