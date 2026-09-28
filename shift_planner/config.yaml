@@ -1,6 +1,6 @@
 name: "Shift Planner"
 description: "Self-hosted shift & vacation planner - shifts, work times, vacation budget/carryover, holidays"
-version: "0.3.2"
+version: "0.4.0"
 slug: "shift_planner"
 init: false
 arch:

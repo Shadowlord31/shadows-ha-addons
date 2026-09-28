@@ -601,16 +601,18 @@ async function loadDash(){
         const isToday=day.date===today;
         const d=new Date(day.date);
         const isWE=d.getDay()===0||d.getDay()===6;
-        const sh=day.shift;
-        const wt=day.work;
+        const shArr=(day.shifts||[]).filter(s=>s.type_name);
+        const sh=shArr[0];
+        const wt=(day.works||[])[0];
 
         let inner='<span style="font-size:10px;color:var(--text3)">—</span>';
         if(day.vacation){
           inner='<span class="wsb" style="background:#34d399;font-size:10px">🌴</span>';
-        } else if(sh?.type_name){
-          const start=wt?.start_time?.slice(0,5)||sh.default_start?.slice(0,5)||'';
-          const end=wt?.end_time?.slice(0,5)||sh.default_end?.slice(0,5)||'';
-          inner=`<span class="wsb" style="background:${sh.color};font-size:10px;padding:1px 5px">${sh.short_name}</span>`;
+        } else if(sh){
+          const start=sh.actual_start?.slice(0,5)||wt?.start_time?.slice(0,5)||sh.default_start?.slice(0,5)||'';
+          const end=sh.actual_end?.slice(0,5)||wt?.end_time?.slice(0,5)||sh.default_end?.slice(0,5)||'';
+          const extra=shArr.length>1?` +${shArr.length-1}`:'';
+          inner=`<span class="wsb" style="background:${sh.color};font-size:10px;padding:1px 5px">${sh.short_name}${extra}</span>`;
           if(start) inner+=`<div style="font-size:9px;color:var(--text2);margin-top:2px">${start}${end?'–'+end:''}</div>`;
         }
 
@@ -656,7 +658,7 @@ async function loadCal(){
   let hols=[];try{hols=(await Promise.all(years.map(yr=>api(`/api/dp/holidays?year=${yr}`)))).flat()}catch{}
   let wts=[];try{wts=await api(`/api/dp/worktimes?from=${rs}&to=${re}`)}catch{}
 
-  const sm={};shifts.forEach(s=>{sm[iso(s.date)]=s});
+  const sm={};shifts.forEach(s=>{(sm[iso(s.date)]=sm[iso(s.date)]||[]).push(s)});
   const vm={};vacs.forEach(v=>{
     let d=new Date(v.start_date+'T12:00:00'),e=new Date(v.end_date+'T12:00:00');
     while(d<=e){if(!vm[iso(d)])vm[iso(d)]=v;d.setDate(d.getDate()+1)}
@@ -691,13 +693,15 @@ async function loadCal(){
     } else if(vac){
       chips+=`<span class="csc" style="background:#34d399">Urlaub</span>`;
       extraCls='vacday';
-    } else if(sh?.type_name){
-      const st1=sh.actual_start||sh.default_start,en1=sh.actual_end||sh.default_end;
-      chips+=`<span class="csc" style="background:${sh.color}">${sh.short_name}</span>`;
-      if(st1&&en1)chips+=`<div class="cst">${st1.slice(0,5)}–${en1.slice(0,5)}</div>`;
+    } else if(sh?.length){
+      sh.filter(s=>s.type_name).forEach(s=>{
+        const st1=s.actual_start||s.default_start,en1=s.actual_end||s.default_end;
+        chips+=`<span class="csc" style="background:${s.color}">${s.short_name}</span>`;
+        if(st1&&en1)chips+=`<div class="cst">${st1.slice(0,5)}–${en1.slice(0,5)}</div>`;
+      });
     }
     if(hol)chips+=`<div class="chl">${hol.name}</div>`;
-    if(sh?.note&&!cfg)chips+=`<div class="ndot"></div>`;
+    if(sh?.some(s=>s.note)&&!cfg)chips+=`<div class="ndot"></div>`;
     html+=`<div class="cc ${inMonth?'':'other'} ${isT?'today':''} ${isW?'weekend':''} ${extraCls} ${hol&&!vac&&!cfg?'holday':''}" onclick="openShiftModal('${ds}')"><div class="cdn">${d.getDate()}</div>${chips}</div>`;
   }
   html+='</div>';
@@ -706,28 +710,69 @@ async function loadCal(){
 function changeMon(d){S.cm+=d;if(S.cm>11){S.cm=0;S.cy++}if(S.cm<0){S.cm=11;S.cy--}loadCal()}
 function goMon(){S.cm=new Date().getMonth();S.cy=new Date().getFullYear();loadCal()}
 
-// ===== SHIFT MODAL =====
+// ===== SHIFT MODAL (mehrere Bloecke pro Tag = Teilschichten) =====
+let SB_removed=[];
+function renderShiftBlocksHTML(blocks){
+  return blocks.map((b,i)=>{
+    const opts=S.sts.map(t=>`<option value="${t.id}" ${String(b.shift_type_id)===String(t.id)?'selected':''}>${t.name}</option>`).join('');
+    return `<div class="shift-block" data-id="${b.id||''}" style="border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px;position:relative">
+      ${blocks.length>1?`<button type="button" class="bico" style="position:absolute;top:6px;right:6px" onclick="removeShiftBlock(${i})">🗑️</button>`:''}
+      <div class="fg" style="margin-bottom:8px"><label>Schichtart${blocks.length>1?` – Block ${i+1}`:''}</label>
+        <select class="mst" onchange="onShiftTypeChange(this)"><option value="">— Kein Eintrag —</option>${opts}</select>
+      </div>
+      <div class="g2">
+        <div class="fg"><label>Tatsächl. Start</label><input type="time" class="mas" value="${b.actual_start||''}"></div>
+        <div class="fg"><label>Tatsächl. Ende</label><input type="time" class="mae" value="${b.actual_end||''}"></div>
+      </div>
+      <div class="fg" style="margin-bottom:0"><label>Notiz</label><textarea class="mn" rows="2">${b.note||''}</textarea></div>
+    </div>`;
+  }).join('');
+}
+function onShiftTypeChange(sel){
+  const block=sel.closest('.shift-block');
+  const t=S.sts.find(t=>t.id==sel.value);
+  const as=block.querySelector('.mas'),ae=block.querySelector('.mae');
+  if(t?.default_start&&!as.value)as.value=t.default_start.slice(0,5);
+  if(t?.default_end&&!ae.value)ae.value=t.default_end.slice(0,5);
+}
+function harvestShiftBlocks(){
+  return [...document.querySelectorAll('#shift-blocks .shift-block')].map(el=>({
+    id:el.dataset.id||null,
+    shift_type_id:el.querySelector('.mst').value,
+    actual_start:el.querySelector('.mas').value,
+    actual_end:el.querySelector('.mae').value,
+    note:el.querySelector('.mn').value,
+  }));
+}
+function addShiftBlock(){
+  const blocks=harvestShiftBlocks();
+  blocks.push({id:null,shift_type_id:'',actual_start:'',actual_end:'',note:''});
+  document.getElementById('shift-blocks').innerHTML=renderShiftBlocksHTML(blocks);
+}
+function removeShiftBlock(i){
+  const blocks=harvestShiftBlocks();
+  const removed=blocks.splice(i,1)[0];
+  if(removed.id)SB_removed.push(removed.id);
+  document.getElementById('shift-blocks').innerHTML=renderShiftBlocksHTML(blocks.length?blocks:[{id:null,shift_type_id:'',actual_start:'',actual_end:'',note:''}]);
+}
 async function openShiftModal(ds){
   const date=new Date(ds+'T12:00:00');const dlbl=`${DF[date.getDay()]}, ${fmt(ds)}`;
-  let ex=null;
-  try{const r=await api(`/api/dp/shifts?year=${date.getFullYear()}&month=${date.getMonth()+1}`);ex=r.find(s=>iso(s.date)===ds)}catch{}
-  // Prüfen ob schon ein Arbeitszeit-Eintrag für diesen Tag existiert
-  let exWT=null;
+  SB_removed=[];
+  let ex=[];
+  try{const r=await api(`/api/dp/shifts?year=${date.getFullYear()}&month=${date.getMonth()+1}`);ex=r.filter(s=>iso(s.date)===ds)}catch{}
+  // Prüfen ob schon Arbeitszeit-Einträge für diesen Tag existieren
+  let exWT=[];
   try{const r=await api(`/api/dp/worktimes?year=${date.getFullYear()}&month=${date.getMonth()+1}`);
     r.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
-    exWT=r.find(e=>e.date===ds);}catch{}
-  const opts=S.sts.map(t=>`<option value="${t.id}" ${ex?.shift_type_id==t.id?'selected':''}>${t.name}</option>`).join('');
-  const wtInfo=exWT?`<div style="font-size:11px;color:var(--text2);margin-top:4px">
-    ${exWT.work_type==='vacation'?'🌴 Urlaubstag':exWT.work_type==='holiday_comp'?'🎉 Freizeitausgleich':exWT.work_type==='sick'?'🤒 Kranktag':`⏱️ ${parseFloat(exWT.actual_hours||0).toFixed(1)}h erfasst`}
+    exWT=r.filter(e=>e.date===ds);}catch{}
+  const blocks=ex.length?ex.map(s=>({id:s.id,shift_type_id:s.shift_type_id,actual_start:s.actual_start?.slice(0,5)||'',actual_end:s.actual_end?.slice(0,5)||'',note:s.note||''})):[{id:null,shift_type_id:'',actual_start:'',actual_end:'',note:''}];
+  const wtInfo=exWT.length?`<div style="font-size:11px;color:var(--text2);margin-top:4px">
+    ${exWT.map(e=>e.work_type==='vacation'?'🌴 Urlaubstag':e.work_type==='holiday_comp'?'🎉 Freizeitausgleich':e.work_type==='sick'?'🤒 Kranktag':`⏱️ ${parseFloat(e.actual_hours||0).toFixed(1)}h`).join(' + ')}
     – bereits in Arbeitszeit eingetragen</div>`:'';
   const body=`
-    <div class="fg"><label>Schichtart</label><select id="mst"><option value="">— Kein Eintrag —</option>${opts}</select></div>
-    <div class="g2">
-      <div class="fg"><label>Tatsächl. Start</label><input type="time" id="mas" value="${ex?.actual_start?.slice(0,5)||''}"></div>
-      <div class="fg"><label>Tatsächl. Ende</label><input type="time" id="mae" value="${ex?.actual_end?.slice(0,5)||''}"></div>
-    </div>
-    <div class="fg"><label>Notiz</label><textarea id="mn" rows="2">${ex?.note||''}</textarea></div>
-    <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">
+    <div id="shift-blocks">${renderShiftBlocksHTML(blocks)}</div>
+    <button type="button" class="btn btn-sm btn-s" onclick="addShiftBlock()">+ Weiterer Block (Teilschicht)</button>
+    <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
       <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Schnelleintrag Arbeitszeit</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" style="background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)"
@@ -739,20 +784,15 @@ async function openShiftModal(ds){
       </div>
       ${wtInfo}
     </div>`;
-  const foot=`${ex?`<button class="btn btn-d btn-sm" onclick="delShift(${ex.id})">Löschen</button>`:''}
+  const foot=`${ex.length===1&&ex[0].id?`<button class="btn btn-d btn-sm" onclick="delShift(${ex[0].id})">Löschen</button>`:''}
     <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
     <button class="btn btn-p" onclick="saveShift('${ds}')">Speichern</button>`;
   openModal(`📅 ${dlbl}`,body,foot);
-  document.getElementById('mst').addEventListener('change',function(){
-    const t=S.sts.find(t=>t.id==this.value);
-    if(t?.default_start)document.getElementById('mas').value=t.default_start.slice(0,5);
-    if(t?.default_end)document.getElementById('mae').value=t.default_end.slice(0,5);
-  });
 }
 
 async function quickWT(ds, work_type, label){
   try{
-    // Arbeitszeit eintragen
+    // Arbeitszeit eintragen (ersetzt evtl. bestehende Bloecke des Tages, da Ganztagestyp)
     await api('/api/dp/worktimes',{method:'POST',body:JSON.stringify({date:ds,work_type,note:label})});
     // Bei Urlaub auch in dp_vacations eintragen
     if(work_type==='vacation'){
@@ -764,12 +804,12 @@ async function quickWT(ds, work_type, label){
   }catch(e){toast(e.message,'e')}
 }
 async function saveShift(ds){
-  const st=document.getElementById('mst').value;
-  const as=document.getElementById('mas').value;
-  const ae=document.getElementById('mae').value;
-  const n=document.getElementById('mn').value;
+  const blocks=harvestShiftBlocks().filter(b=>b.shift_type_id||b.actual_start||b.actual_end||b.note);
   try{
-    await api('/api/dp/shifts',{method:'POST',body:JSON.stringify({date:ds,shift_type_id:st||null,actual_start:as||null,actual_end:ae||null,note:n||null})});
+    for(const id of SB_removed) await api(`/api/dp/shifts/${id}`,{method:'DELETE'});
+    for(const b of blocks){
+      await api('/api/dp/shifts',{method:'POST',body:JSON.stringify({id:b.id?Number(b.id):undefined,date:ds,shift_type_id:b.shift_type_id||null,actual_start:b.actual_start||null,actual_end:b.actual_end||null,note:b.note||null})});
+    }
     closeModal();toast('Schicht gespeichert');
     if(S.tab==='dash')loadDash();else if(S.tab==='cal')loadCal();
   }catch(e){toast(e.message,'e')}
@@ -804,7 +844,7 @@ async function loadWork(){
   const urlaubTage=ents.filter(e=>e.work_type==='vacation'||e.is_vacation).length;
   const krankTage=ents.filter(e=>e.work_type==='sick').length;
   const freizeitTage=ents.filter(e=>e.work_type==='holiday_comp').length;
-  const arbeitsTage=ents.length-urlaubTage-krankTage-freizeitTage;
+  const entTage=new Set(ents.map(e=>e.date)).size; // Teilschichten: mehrere Bloecke am selben Tag zaehlen als 1 Tag
   const diff=ta-tgt.target;
   const diffColor=diff>=0?'var(--green)':'var(--red)';
   document.getElementById('wstats').innerHTML=`
@@ -818,9 +858,9 @@ async function loadWork(){
     <div class="sc sy"><div class="sl">🌴 Urlaub</div><div class="sv">${urlaubTage}</div><div class="ss">Tage</div></div>
     ${krankTage>0?`<div class="sc sr"><div class="sl">🤒 Krank</div><div class="sv">${krankTage}</div><div class="ss">Tage</div></div>`:''}
     ${freizeitTage>0?`<div class="sc sp"><div class="sl">🎉 Freizeitausgleich</div><div class="sv">${freizeitTage}</div><div class="ss">Tage</div></div>`:''}
-    <div class="sc"><div class="sl">Ø pro Tag</div><div class="sv">${ents.length>0?(ta/ents.length).toFixed(1):0}</div><div class="ss">Stunden</div></div>`;
+    <div class="sc"><div class="sl">Ø pro Tag</div><div class="sv">${entTage>0?(ta/entTage).toFixed(1):0}</div><div class="ss">Stunden</div></div>`;
   rangeEnts.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
-  const entMap={};rangeEnts.forEach(e=>entMap[e.date]=e);
+  const entMap={};rangeEnts.forEach(e=>{(entMap[e.date]=entMap[e.date]||[]).push(e)});
   const todayStr=iso(new Date());
   const weeks=[];let week=[];
   for(let d=new Date(rangeStart);d<=rangeEnd;d.setDate(d.getDate()+1)){
@@ -828,15 +868,14 @@ async function loadWork(){
     if(week.length===7){weeks.push(week);week=[];}
   }
   document.getElementById('wtlist').innerHTML=weeks.map(week=>{
-    const wSum=week.reduce((s,d)=>{const e=entMap[iso(d)];return s+(e?parseFloat(e.actual_hours||0):0);},0);
+    const wSum=week.reduce((s,d)=>(entMap[iso(d)]||[]).reduce((s2,e)=>s2+parseFloat(e.actual_hours||0),s),0);
     const wLabel=`KW ${getKW(week[0])}`;
     const cells=week.map(d=>{
-      const ds=iso(d);const e=entMap[ds];
+      const ds=iso(d);const es=entMap[ds]||[];
       const inMonth=d.getMonth()===m;
       const isToday=ds===todayStr;const isWE=d.getDay()===0||d.getDay()===6;
-      const ac=e?parseFloat(e.actual_hours||0):null;
-      const wtype=e?.work_type||(e?.is_vacation?'vacation':'work');
-      const is8h=wtype==='vacation'||wtype==='holiday_comp'||wtype==='sick';
+      const wtype=es[0]?.work_type||(es[0]?.is_vacation?'vacation':'work');
+      const is8h=es.length===1&&(wtype==='vacation'||wtype==='holiday_comp'||wtype==='sick');
       let inner='';
       const typeConfig={
         vacation: {icon:'🌴',label:'Urlaub',   color:'var(--green)',  bg:'rgba(52,211,153,.08)'},
@@ -847,19 +886,23 @@ async function loadWork(){
       const tc=typeConfig[wtype]||typeConfig.work;
       if(is8h){
         inner=`<div style="color:${tc.color};font-size:11px">${tc.icon} ${tc.label}</div><div style="color:${tc.color};font-weight:700;font-size:15px">8h</div>`;
-      } else if(e){
-        const st=e.start_time?.slice(0,5)||'',et=e.end_time?.slice(0,5)||'';
-        inner=`${st?`<div style="font-size:10px;color:var(--text2)">${st}${et?'-'+et:''}</div>`:''}
-          <div style="font-weight:700;font-size:15px;color:${tc.color}">${ac.toFixed(1)}h</div>
-          ${e.break_minutes>0?`<div style="font-size:9px;color:var(--text3)">${e.break_minutes}min</div>`:''}`;
+      } else if(es.length){
+        const totalH=es.reduce((s,e)=>s+parseFloat(e.actual_hours||0),0);
+        const totalBreak=es.reduce((s,e)=>s+(e.break_minutes||0),0);
+        inner=es.map(e=>{
+          const st=e.start_time?.slice(0,5)||'',et=e.end_time?.slice(0,5)||'';
+          return st?`<div style="font-size:10px;color:var(--text2)">${st}${et?'-'+et:''}</div>`:'';
+        }).join('')
+        + `<div style="font-weight:700;font-size:15px;color:${tc.color}">${totalH.toFixed(1)}h</div>`
+        + (totalBreak>0?`<div style="font-size:9px;color:var(--text3)">${totalBreak}min</div>`:'');
       }
-      const bg=is8h?tc.bg:e?'var(--bg3)':isWE?'rgba(255,255,255,.01)':'var(--bg2)';
-      const bdr=isToday?'var(--accent)':e?'var(--border)':'rgba(42,51,72,.5)';
+      const bg=is8h?tc.bg:es.length?'var(--bg3)':isWE?'rgba(255,255,255,.01)':'var(--bg2)';
+      const bdr=isToday?'var(--accent)':es.length?'var(--border)':'rgba(42,51,72,.5)';
       return `<div style="background:${bg};border:1px solid ${bdr};border-radius:var(--rs);padding:8px 6px;min-height:72px;cursor:pointer;position:relative;opacity:${inMonth?'1':'.55'}"
-        data-date="${ds}" data-entry-id="${e?.id||''}"
+        data-date="${ds}" data-has-entry="${es.length?'1':''}"
         onclick="handleWTDayClick(this)">
         <div style="font-size:11px;font-weight:600;color:${isToday?'var(--accent)':isWE?'var(--text3)':'var(--text2)'}">${DD[d.getDay()]} ${d.getDate()}</div>
-        ${inner}${e?.note?'<div style="font-size:9px;color:var(--yellow);position:absolute;top:4px;right:4px">&#128203;</div>':''}
+        ${inner}${es.some(e=>e.note)?'<div style="font-size:9px;color:var(--yellow);position:absolute;top:4px;right:4px">&#128203;</div>':''}
       </div>`;
     }).join('');
     return `<div style="margin-bottom:16px">
@@ -872,75 +915,124 @@ async function loadWork(){
   }).join('');
 }
 function getKW(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const dn=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dn);const ys=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-ys)/86400000)+1)/7);}
-function openWTModalDate(ds){openWTModal({date:ds});}
+function openWTModalDate(ds){openWTModal([],ds);}
 
 async function handleWTDayClick(el){
   const ds=el.getAttribute('data-date');
-  const eid=el.getAttribute('data-entry-id');
-  if(eid){
-    // Bestehenden Eintrag laden und Modal öffnen
+  const hasEntry=el.getAttribute('data-has-entry');
+  if(hasEntry){
     const y=ds.slice(0,4),m=parseInt(ds.slice(5,7));
     let ents=[];try{ents=await api(`/api/dp/worktimes?year=${y}&month=${m}`)}catch{}
     ents.forEach(e=>{if(typeof e.date!=='string'||e.date.length>10)e.date=new Date(e.date).toLocaleDateString('sv-SE');});
-    const entry=ents.find(e=>e.date===ds);
-    openWTModal(entry||{date:ds});
+    openWTModal(ents.filter(e=>e.date===ds),ds);
   } else {
-    openWTModal({date:ds});
+    openWTModal([],ds);
   }
 }
 function changeWMon(d){S.wm+=d;if(S.wm>11){S.wm=0;S.wy++}if(S.wm<0){S.wm=11;S.wy--}loadWork()}
-function openWTModal(e){
-  const wtype=e?.work_type||(e?.is_vacation?'vacation':'work');
-  const is8h=wtype==='vacation'||wtype==='holiday_comp'||wtype==='sick';
+
+// ===== ARBEITSZEIT-MODAL (mehrere Bloecke pro Tag = Teilschichten) =====
+let WB_removed=[],WT_wholeDayId=null;
+function renderWTBlocksHTML(blocks){
+  return blocks.map((b,i)=>`
+    <div class="wt-block" data-id="${b.id||''}" style="border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px;position:relative">
+      ${blocks.length>1?`<button type="button" class="bico" style="position:absolute;top:6px;right:6px" onclick="removeWTBlock(${i})">🗑️</button>`:''}
+      <div class="g2">
+        <div class="fg"><label>Von${blocks.length>1?` – Block ${i+1}`:''}</label><input type="time" class="wts" value="${b.start_time||''}" oninput="updateWTPreview()"></div>
+        <div class="fg"><label>Bis</label><input type="time" class="wte" value="${b.end_time||''}" oninput="updateWTPreview()"></div>
+      </div>
+      <div class="fg"><label>Pause (Minuten)</label><input type="number" class="wtb" min="0" max="120" step="5" value="${b.break_minutes||0}" oninput="updateWTPreview()"></div>
+      <div class="fg" style="margin-bottom:0"><label>Notiz</label><input type="text" class="wtn" value="${b.note||''}"></div>
+    </div>`).join('');
+}
+function harvestWTBlocks(){
+  return [...document.querySelectorAll('#wt-blocks .wt-block')].map(el=>({
+    id:el.dataset.id||null,
+    start_time:el.querySelector('.wts').value,
+    end_time:el.querySelector('.wte').value,
+    break_minutes:el.querySelector('.wtb').value,
+    note:el.querySelector('.wtn').value,
+  }));
+}
+function addWTBlock(){
+  const blocks=harvestWTBlocks();
+  blocks.push({id:null,start_time:'',end_time:'',break_minutes:0,note:''});
+  document.getElementById('wt-blocks').innerHTML=renderWTBlocksHTML(blocks);
+  updateWTPreview();
+}
+function removeWTBlock(i){
+  const blocks=harvestWTBlocks();
+  const removed=blocks.splice(i,1)[0];
+  if(removed.id)WB_removed.push(removed.id);
+  document.getElementById('wt-blocks').innerHTML=renderWTBlocksHTML(blocks.length?blocks:[{id:null,start_time:'',end_time:'',break_minutes:0,note:''}]);
+  updateWTPreview();
+}
+function updateWTPreview(){
+  const blocks=harvestWTBlocks();
+  const total=blocks.reduce((s,b)=>s+(b.start_time&&b.end_time?calcHours(b.start_time,b.end_time,parseInt(b.break_minutes||0)):0),0);
+  const el=document.getElementById('wt-preview');
+  if(el)el.textContent=total>0?`= ${total.toFixed(2)} Stunden gesamt`:'';
+}
+function openWTModal(entries,ds){
+  entries=entries||[];
+  ds=ds||iso(new Date());
+  WB_removed=[];
+  const dayType=entries.find(e=>['vacation','holiday_comp','sick'].includes(e.work_type))?.work_type||'work';
+  const wholeDayEntry=entries.find(e=>e.work_type===dayType&&dayType!=='work');
+  WT_wholeDayId=wholeDayEntry?.id||null;
+  const workBlocks=dayType==='work'&&entries.length
+    ?entries.map(e=>({id:e.id,start_time:e.start_time?.slice(0,5)||'',end_time:e.end_time?.slice(0,5)||'',break_minutes:e.break_minutes||0,note:e.note||''}))
+    :[{id:null,start_time:'',end_time:'',break_minutes:0,note:''}];
   const body=`
-    <div class="fg"><label>Datum</label><input type="date" id="wtd" value="${e?iso(e.date):iso(new Date())}"></div>
+    <div class="fg"><label>Datum</label><input type="date" id="wtd" value="${ds}"></div>
     <div class="fg">
       <label>Typ</label>
       <select id="wtyp" onchange="toggleWTFields()">
-        <option value="work" ${wtype==='work'?'selected':''}>Arbeitstag</option>
-        <option value="vacation" ${wtype==='vacation'?'selected':''}>🌴 Urlaubstag (8h)</option>
-        <option value="holiday_comp" ${wtype==='holiday_comp'?'selected':''}>🎉 Feiertagsausgleich (8h)</option>
-        <option value="sick" ${wtype==='sick'?'selected':''}>🤒 Krank (8h)</option>
+        <option value="work" ${dayType==='work'?'selected':''}>Arbeitstag</option>
+        <option value="vacation" ${dayType==='vacation'?'selected':''}>🌴 Urlaubstag (8h)</option>
+        <option value="holiday_comp" ${dayType==='holiday_comp'?'selected':''}>🎉 Feiertagsausgleich (8h)</option>
+        <option value="sick" ${dayType==='sick'?'selected':''}>🤒 Krank (8h)</option>
       </select>
     </div>
-    <div id="wt-work-fields" style="${is8h?'display:none':''}">
-      <div class="g2">
-        <div class="fg"><label>Von</label><input type="time" id="wts" value="${e?.start_time?.slice(0,5)||''}"></div>
-        <div class="fg"><label>Bis</label><input type="time" id="wte" value="${e?.end_time?.slice(0,5)||''}"></div>
-      </div>
-      <div class="fg"><label>Pause (Minuten)</label><input type="number" id="wtb" min="0" max="120" step="5" value="${e?.break_minutes||0}"></div>
-      <div id="wt-preview" style="font-size:13px;color:var(--accent);font-weight:600;margin-top:-8px;margin-bottom:8px"></div>
+    <div id="wt-work-fields" style="${dayType==='work'?'':'display:none'}">
+      <div id="wt-blocks">${renderWTBlocksHTML(workBlocks)}</div>
+      <button type="button" class="btn btn-sm btn-s" onclick="addWTBlock()">+ Weiterer Block (Teilschicht)</button>
+      <div id="wt-preview" style="font-size:13px;color:var(--accent);font-weight:600;margin-top:8px"></div>
     </div>
-    <div class="fg"><label>Notiz</label><input type="text" id="wtn" value="${e?.note||''}"></div>`;
+    <div id="wt-day-fields" style="${dayType==='work'?'display:none':''}">
+      <div class="fg"><label>Notiz</label><input type="text" id="wtn-day" value="${wholeDayEntry?.note||''}"></div>
+    </div>`;
+  const delId=dayType!=='work'?wholeDayEntry?.id:(workBlocks.length===1?workBlocks[0].id:null);
   openModal('⏱️ Arbeitszeit erfassen',body,`
-    ${e?.id?`<button class="btn btn-d btn-sm" onclick="delWT(${e.id})">Löschen</button>`:''}
+    ${delId?`<button class="btn btn-d btn-sm" onclick="delWT(${delId})">Löschen</button>`:''}
     <button class="btn btn-s" onclick="closeModal()">Abbrechen</button>
-    <button class="btn btn-p" onclick="saveWT(${e?.id||'null'})">Speichern</button>`);
-  const upd=()=>{
-    const s=document.getElementById('wts')?.value,en=document.getElementById('wte')?.value,br=parseInt(document.getElementById('wtb')?.value||0);
-    if(s&&en){const h=calcHours(s,en,br);document.getElementById('wt-preview').textContent=h>0?`= ${h.toFixed(2)} Stunden`:'';}
-  };
-  document.getElementById('wts')?.addEventListener('change',upd);
-  document.getElementById('wte')?.addEventListener('change',upd);
-  document.getElementById('wtb')?.addEventListener('input',upd);
-  if(e?.start_time)upd();
+    <button class="btn btn-p" onclick="saveWT('${ds}')">Speichern</button>`);
+  updateWTPreview();
 }
 function toggleWTFields(){
   const t=document.getElementById('wtyp').value;
-  const is8h=t==='vacation'||t==='holiday_comp'||t==='sick';
-  document.getElementById('wt-work-fields').style.display=is8h?'none':'';
+  const isWork=t==='work';
+  document.getElementById('wt-work-fields').style.display=isWork?'':'none';
+  document.getElementById('wt-day-fields').style.display=isWork?'none':'';
 }
-async function saveWT(id){
-  const d=document.getElementById('wtd').value;
+async function saveWT(ds){
+  const d=document.getElementById('wtd').value||ds;
   const wt=document.getElementById('wtyp').value;
   const is8h=wt==='vacation'||wt==='holiday_comp'||wt==='sick';
-  const s=document.getElementById('wts')?.value;
-  const en=document.getElementById('wte')?.value;
-  const br=parseInt(document.getElementById('wtb')?.value||0);
-  const n=document.getElementById('wtn').value;
-  if(!is8h&&(!s||!en)){toast('Bitte Start- und Endzeit eintragen','e');return}
   try{
-    await api('/api/dp/worktimes',{method:'POST',body:JSON.stringify({date:d,start_time:s||null,end_time:en||null,break_minutes:br,note:n,work_type:wt})});
+    if(is8h){
+      const n=document.getElementById('wtn-day').value;
+      await api('/api/dp/worktimes',{method:'POST',body:JSON.stringify({date:d,work_type:wt,note:n})});
+    } else {
+      const blocks=harvestWTBlocks().filter(b=>b.start_time||b.end_time||b.note);
+      if(!blocks.length){toast('Bitte mindestens einen Block mit Start-/Endzeit eintragen','e');return}
+      for(const b of blocks){ if(!b.start_time||!b.end_time){toast('Bitte bei jedem Block Start- und Endzeit eintragen','e');return} }
+      if(WT_wholeDayId) await api(`/api/dp/worktimes/${WT_wholeDayId}`,{method:'DELETE'});
+      for(const id of WB_removed) await api(`/api/dp/worktimes/${id}`,{method:'DELETE'});
+      for(const b of blocks){
+        await api('/api/dp/worktimes',{method:'POST',body:JSON.stringify({id:b.id?Number(b.id):undefined,date:d,start_time:b.start_time,end_time:b.end_time,break_minutes:parseInt(b.break_minutes||0),note:b.note,work_type:'work'})});
+      }
+    }
     closeModal();toast('Gespeichert');loadWork();
   }catch(e){toast(e.message,'e')}
 }

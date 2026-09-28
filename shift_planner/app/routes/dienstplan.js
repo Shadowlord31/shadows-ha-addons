@@ -52,15 +52,24 @@ router.get('/api/dp/shifts', auth, (req, res) => {
   const p = [req.dpUser.id];
   if (from && to) { q += ` AND s.date>=? AND s.date<=?`; p.push(from, to); }
   else if (year && month) { q += ` AND strftime('%Y',s.date)=? AND strftime('%m',s.date)=?`; p.push(String(year), String(month).padStart(2, '0')); }
-  q += ' ORDER BY s.date';
+  q += ' ORDER BY s.date,s.sort_order';
   res.json(db.prepare(q).all(...p));
 });
+// Ohne id: neuer Block (Teilschicht) wird an bestehende Bloecke des Tages angehaengt.
+// Mit id: genau dieser Block wird aktualisiert (Schichtart/Zeiten/Notiz).
 router.post('/api/dp/shifts', auth, (req, res) => {
-  const { date, shift_type_id, actual_start, actual_end, note } = req.body;
-  const row = db.prepare(
-    `INSERT INTO dp_shifts (user_id,date,shift_type_id,actual_start,actual_end,note) VALUES (?,?,?,?,?,?)
-     ON CONFLICT(user_id,date) DO UPDATE SET shift_type_id=excluded.shift_type_id,actual_start=excluded.actual_start,actual_end=excluded.actual_end,note=excluded.note RETURNING *`
-  ).get(req.dpUser.id, date, shift_type_id || null, actual_start || null, actual_end || null, note || null);
+  const { id, date, shift_type_id, actual_start, actual_end, note } = req.body;
+  let row;
+  if (id) {
+    row = db.prepare(
+      `UPDATE dp_shifts SET shift_type_id=?,actual_start=?,actual_end=?,note=? WHERE id=? AND user_id=? RETURNING *`
+    ).get(shift_type_id || null, actual_start || null, actual_end || null, note || null, id, req.dpUser.id);
+  } else {
+    const next = db.prepare('SELECT COALESCE(MAX(sort_order),-1)+1 as n FROM dp_shifts WHERE user_id=? AND date=?').get(req.dpUser.id, date).n;
+    row = db.prepare(
+      `INSERT INTO dp_shifts (user_id,date,sort_order,shift_type_id,actual_start,actual_end,note) VALUES (?,?,?,?,?,?,?) RETURNING *`
+    ).get(req.dpUser.id, date, next, shift_type_id || null, actual_start || null, actual_end || null, note || null);
+  }
   res.json(row);
 });
 router.delete('/api/dp/shifts/:id', auth, (req, res) => {
@@ -156,11 +165,15 @@ router.get('/api/dp/worktimes', auth, (req, res) => {
   const p = [req.dpUser.id];
   if (from && to) { q += ' AND date>=? AND date<=?'; p.push(from, to); }
   else if (year && month) { q += " AND strftime('%Y',date)=? AND strftime('%m',date)=?"; p.push(String(year), String(month).padStart(2, '0')); }
-  q += ' ORDER BY date DESC';
+  q += ' ORDER BY date DESC,sort_order ASC';
   res.json(db.prepare(q).all(...p));
 });
+// Ohne id: neuer Block wird angehaengt (Teilschicht) -- ausser bei einem
+// Ganztages-Typ (Urlaub/Feiertagsausgleich/Krank), der ersetzt alle
+// bestehenden Bloecke des Tages, da er den ganzen Tag abbildet.
+// Mit id: genau dieser Block wird aktualisiert.
 router.post('/api/dp/worktimes', auth, (req, res) => {
-  const { date, start_time, end_time, break_minutes, note, work_type } = req.body;
+  const { id, date, start_time, end_time, break_minutes, note, work_type } = req.body;
   let actual_hours = null;
   const is8h = work_type === 'vacation' || work_type === 'holiday_comp' || work_type === 'sick';
   if (is8h) { actual_hours = 8; }
@@ -169,10 +182,18 @@ router.post('/api/dp/worktimes', auth, (req, res) => {
     const [eh, em] = end_time.split(':').map(Number);
     actual_hours = Math.round(((eh * 60 + em) - (sh * 60 + sm) - (break_minutes || 0)) / 60 * 100) / 100;
   }
-  const row = db.prepare(
-    `INSERT INTO dp_work_times (user_id,date,start_time,end_time,break_minutes,actual_hours,note,is_vacation,work_type) VALUES (?,?,?,?,?,?,?,?,?)
-     ON CONFLICT(user_id,date) DO UPDATE SET start_time=excluded.start_time,end_time=excluded.end_time,break_minutes=excluded.break_minutes,actual_hours=excluded.actual_hours,note=excluded.note,is_vacation=excluded.is_vacation,work_type=excluded.work_type RETURNING *`
-  ).get(req.dpUser.id, date, start_time || null, end_time || null, break_minutes || 0, actual_hours, note || null, b(is8h), work_type || 'work');
+  let row;
+  if (id) {
+    row = db.prepare(
+      `UPDATE dp_work_times SET start_time=?,end_time=?,break_minutes=?,actual_hours=?,note=?,is_vacation=?,work_type=? WHERE id=? AND user_id=? RETURNING *`
+    ).get(start_time || null, end_time || null, break_minutes || 0, actual_hours, note || null, b(is8h), work_type || 'work', id, req.dpUser.id);
+  } else {
+    if (is8h) db.prepare('DELETE FROM dp_work_times WHERE user_id=? AND date=?').run(req.dpUser.id, date);
+    const next = is8h ? 0 : db.prepare('SELECT COALESCE(MAX(sort_order),-1)+1 as n FROM dp_work_times WHERE user_id=? AND date=?').get(req.dpUser.id, date).n;
+    row = db.prepare(
+      `INSERT INTO dp_work_times (user_id,date,sort_order,start_time,end_time,break_minutes,actual_hours,note,is_vacation,work_type) VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING *`
+    ).get(req.dpUser.id, date, next, start_time || null, end_time || null, break_minutes || 0, actual_hours, note || null, b(is8h), work_type || 'work');
+  }
   res.json(row);
 });
 router.delete('/api/dp/worktimes/:id', auth, (req, res) => {
@@ -296,6 +317,7 @@ router.get('/api/dp/stats/:year', auth, (req, res) => {
     const wtr = db.prepare("SELECT date as d,actual_hours,work_type,is_vacation FROM dp_work_times WHERE user_id=? AND strftime('%Y',date)=? AND date<=? ORDER BY date").all(uid, String(y), cutoff);
     const months = {};
     for (let m = 0; m < 12; m++) months[m] = { actual: 0, target: 0, vacation: 0, sick: 0, holiday_comp: 0, work_days: 0 };
+    const workDaysSeen = new Set(); // Teilschichten: mehrere 'work'-Bloecke am selben Tag zaehlen nur als 1 Arbeitstag
     wtr.forEach(e => {
       const m = parseInt(e.d.slice(5, 7)) - 1;
       const h = parseFloat(e.actual_hours || 0);
@@ -304,7 +326,7 @@ router.get('/api/dp/stats/:year', auth, (req, res) => {
       if (wt === 'vacation') months[m].vacation++;
       else if (wt === 'sick') months[m].sick++;
       else if (wt === 'holiday_comp') months[m].holiday_comp++;
-      else months[m].work_days++;
+      else if (!workDaysSeen.has(e.d)) { workDaysSeen.add(e.d); months[m].work_days++; }
     });
     const vacR = db.prepare("SELECT start_date as s,end_date as e,status FROM dp_vacations WHERE user_id=? AND year=?").all(uid, y);
     const coR = db.prepare('SELECT carryover FROM dp_vacation_carryover WHERE user_id=? AND year=?').get(uid, y);
@@ -350,12 +372,12 @@ router.get('/api/dp/dashboard', (req, res) => {
       const shifts = db.prepare('SELECT s.*,st.name as type_name,st.short_name,st.color,st.default_start,st.default_end FROM dp_shifts s LEFT JOIN dp_shift_types st ON s.shift_type_id=st.id WHERE s.user_id=? AND s.date>=? AND s.date<=? ORDER BY s.date').all(u.id, ws, weekEnd);
       const wts = db.prepare('SELECT * FROM dp_work_times WHERE user_id=? AND date>=? AND date<=?').all(u.id, ws, weekEnd);
       const nv = db.prepare("SELECT * FROM dp_vacations WHERE user_id=? AND start_date>=? AND status!='abgelehnt' ORDER BY start_date LIMIT 1").get(u.id, today);
-      const shMap = {}; shifts.forEach(s => { shMap[s.date] = s; });
-      const wMap = {}; wts.forEach(w => { wMap[w.date] = w; });
+      const shMap = {}; shifts.forEach(s => { (shMap[s.date] = shMap[s.date] || []).push(s); });
+      const wMap = {}; wts.forEach(w => { (wMap[w.date] = wMap[w.date] || []).push(w); });
       const vacR = db.prepare("SELECT * FROM dp_vacations WHERE user_id=? AND end_date>=? AND start_date<=? AND status!='abgelehnt'").all(u.id, ws, weekEnd);
       const vSet = new Set();
       vacR.forEach(v => { let d = new Date(v.start_date + 'T12:00:00'), e = new Date(v.end_date + 'T12:00:00'); while (d <= e) { vSet.add(d.toISOString().slice(0, 10)); d.setDate(d.getDate() + 1); } });
-      const week = weekDates.map(d => ({ date: d, shift: shMap[d] || null, work: wMap[d] || null, vacation: vSet.has(d) }));
+      const week = weekDates.map(d => ({ date: d, shifts: shMap[d] || [], works: wMap[d] || [], vacation: vSet.has(d) }));
       result.push({ id: u.id, name: u.display_name, vacation: { budget, remaining: budget - byS.genommen - byS.geplant - byS.genehmigt }, week, next_vacation: nv || null });
     }
     res.json(result);

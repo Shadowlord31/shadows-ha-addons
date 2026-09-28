@@ -27,10 +27,11 @@ CREATE TABLE IF NOT EXISTS dp_shifts (
   user_id INTEGER REFERENCES dp_users(id) ON DELETE CASCADE,
   shift_type_id INTEGER REFERENCES dp_shift_types(id) ON DELETE SET NULL,
   date DATE NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   actual_start TIME,
   actual_end TIME,
   note TEXT,
-  UNIQUE(user_id, date)
+  UNIQUE(user_id, date, sort_order)
 );
 
 CREATE TABLE IF NOT EXISTS dp_vacations (
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS dp_work_times (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER REFERENCES dp_users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   start_time TIME,
   end_time TIME,
   break_minutes INTEGER DEFAULT 0,
@@ -55,7 +57,7 @@ CREATE TABLE IF NOT EXISTS dp_work_times (
   is_vacation INTEGER DEFAULT 0,
   work_type VARCHAR(30) DEFAULT 'work',
   note TEXT,
-  UNIQUE(user_id, date)
+  UNIQUE(user_id, date, sort_order)
 );
 
 CREATE TABLE IF NOT EXISTS dp_vacation_carryover (
