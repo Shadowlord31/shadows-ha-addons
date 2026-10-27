@@ -52,6 +52,11 @@ DEVICE = {
 }
 
 
+def is_transient(e: Exception) -> bool:
+    """Kurzzeitige Netzwerkfehler (DNS, Timeout): Sitzung behalten, nicht neu anmelden."""
+    return isinstance(e, (aiohttp.ClientConnectionError, asyncio.TimeoutError, OSError))
+
+
 class CloudRejected(RuntimeError):
     """Die VeSync-Cloud hat den Befehl abgelehnt (Verbindung/Login sind in Ordnung)."""
 
@@ -268,6 +273,7 @@ class App:
         self.state = load_state()
         self.client: aiomqtt.Client | None = None
         self.had_error = False
+        self.fail_count = 0
 
     async def pub(self, topic: str, payload, retain: bool = True) -> None:
         await self.client.publish(topic, payload if isinstance(payload, (str, bytes)) else json.dumps(payload),
@@ -288,11 +294,19 @@ class App:
         try:
             data = await self.fryer.refresh()
         except Exception as e:  # noqa: BLE001
-            await self.fryer.close()
+            self.fail_count += 1
+            transient = is_transient(e)
+            if not transient:
+                await self.fryer.close()
+            if transient and self.fail_count < 3:
+                # Kurzer Netzwerkaussetzer: still weiterversuchen, Sitzung bleibt bestehen
+                log.warning("Status voruebergehend nicht abrufbar (%s), Versuch %d", e, self.fail_count)
+                return
             self.had_error = True
             await self.say(f"VeSync-Fehler beim Status: {e}")
             await self.pub(AVAIL, "offline")
             return
+        self.fail_count = 0
         await self.pub(AVAIL, "online")
         if self.had_error:
             self.had_error = False
@@ -317,7 +331,8 @@ class App:
             # Verbindung ist in Ordnung, nur der Befehl wurde abgelehnt
             await self.say(f"Fehler: {e}")
         except Exception as e:  # noqa: BLE001
-            await self.fryer.close()
+            if not is_transient(e):
+                await self.fryer.close()
             await self.say(f"Fehler ({label}): {e}")
         await asyncio.sleep(2)
         await self.poll_once()

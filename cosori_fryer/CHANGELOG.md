@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.1
+- Kurze Netzwerkfehler (z. B. DNS "Name or service not known") bauen die VeSync-Sitzung nicht mehr neu auf; erst nach 3 Fehlversuchen in Folge wird der Status als offline gemeldet.
+
 ## 0.2.0
 - Grandzone (beide Zonen zusammen, workChamber 3) mit eigenen Entitäten: Modus, Temperatur, Zeit, Senden, Beenden, Status, Restzeit.
 - Status wird direkt aus der Cloud-Antwort gelesen (inkl. Grandzone); bei aktiver Grandzone zeigen Zone 1/2 "Grandzone".
