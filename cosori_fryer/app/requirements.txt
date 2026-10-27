@@ -1,0 +1,3 @@
+pyvesync @ git+https://github.com/lackas/pyvesync@e86d10241c322e5ffeda87ab24d21ff2332b18c9
+aiomqtt>=2.0
+aiohttp>=3.9

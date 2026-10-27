@@ -19,6 +19,11 @@ Migrated from the standalone [dienstplan](https://github.com/Shadowlord31/dienst
 Self-hosted savings jars with goal tracking. Deposits, withdrawals, progress bars.
 Optional one-time or repeatable import from the [finanz-app](https://github.com/Shadowlord31/finanz-app).
 
+### [Cosori Fryer](./cosori_fryer)
+Cosori Dual Blaze TwinFry (CAF-TF101S) via VeSync cloud and MQTT discovery: per zone mode,
+temperature and time, send/end buttons, status and remaining time. The cook start stays on
+the device (EU safety rule).
+
 ## Installation
 
 1. In Home Assistant, go to **Settings > Add-ons > Add-on Store**

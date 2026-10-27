@@ -1,0 +1,24 @@
+name: "Cosori Fryer"
+description: "Cosori Dual Blaze TwinFry (CAF-TF101S) per VeSync-Cloud und MQTT-Discovery in Home Assistant"
+version: "0.1.0"
+slug: "cosori_fryer"
+init: false
+arch:
+  - amd64
+  - aarch64
+services:
+  - mqtt:want
+options:
+  vesync_email: ""
+  vesync_password: ""
+  country_code: "DE"
+  poll_interval: 30
+schema:
+  vesync_email: str
+  vesync_password: password
+  country_code: str
+  poll_interval: "int(10,600)"
+  mqtt_host: "str?"
+  mqtt_port: "int?"
+  mqtt_user: "str?"
+  mqtt_password: "password?"
