@@ -19,6 +19,7 @@ from pyvesync import VeSync
 from pyvesync.const import TemperatureUnits
 from pyvesync.models import fryer_models as models
 from pyvesync.utils.device_mixins import process_bypassv2_result
+from pyvesync.utils.errors import VeSyncRateLimitError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("cosori")
@@ -27,7 +28,9 @@ OPT = json.loads(Path("/data/options.json").read_text()) if Path("/data/options.
 EMAIL = OPT.get("vesync_email") or os.environ.get("VESYNC_EMAIL", "")
 PASSWORD = OPT.get("vesync_password") or os.environ.get("VESYNC_PASSWORD", "")
 COUNTRY = OPT.get("country_code") or "DE"
-POLL = int(OPT.get("poll_interval") or 30)
+POLL = int(OPT.get("poll_interval") or 60)   # Ruhe-Intervall
+POLL_ACTIVE = 20                              # waehrend ein Programm gesetzt ist/laeuft
+RATE_LIMIT_PAUSE = 600
 STATE_FILE = Path(os.environ.get("STATE_FILE", "/data/state.json"))
 
 BASE = "cosori_fryer"
@@ -55,6 +58,13 @@ DEVICE = {
 def is_transient(e: Exception) -> bool:
     """Kurzzeitige Netzwerkfehler (DNS, Timeout): Sitzung behalten, nicht neu anmelden."""
     return isinstance(e, (aiohttp.ClientConnectionError, asyncio.TimeoutError, OSError))
+
+
+CLOUD_CODES = {
+    11910000: "Zone 1 hat schon ein Programm bzw. kocht - erst beenden",
+    11911000: "Zone 2 hat schon ein Programm bzw. kocht - erst beenden",
+    11912000: "Grandzone/alle Zonen haben schon ein Programm bzw. kochen - erst beenden",
+}
 
 
 class CloudRejected(RuntimeError):
@@ -177,8 +187,9 @@ class Fryer:
             outer = (resp or {}).get("code")
             inner = ((resp or {}).get("result") or {}).get("code", 0)
             if outer != 0 or inner != 0:
-                raise CloudRejected(f"{label} abgelehnt (Cloud-Code {inner or outer}); "
-                                    "Temperatur/Zeit passen evtl. nicht zum Modus")
+                code = inner or outer
+                hint = CLOUD_CODES.get(code, "Temperatur/Zeit passen evtl. nicht zum Modus")
+                raise CloudRejected(f"{label} abgelehnt (Cloud-Code {code}): {hint}")
             return f"{label} gesendet"
 
     async def end_zone(self, zone: int) -> str:
@@ -274,6 +285,8 @@ class App:
         self.client: aiomqtt.Client | None = None
         self.had_error = False
         self.fail_count = 0
+        self.active = False
+        self.pause_until = 0.0
 
     async def pub(self, topic: str, payload, retain: bool = True) -> None:
         await self.client.publish(topic, payload if isinstance(payload, (str, bytes)) else json.dumps(payload),
@@ -293,6 +306,12 @@ class App:
     async def poll_once(self) -> None:
         try:
             data = await self.fryer.refresh()
+        except VeSyncRateLimitError:
+            self.pause_until = asyncio.get_event_loop().time() + RATE_LIMIT_PAUSE
+            self.had_error = True
+            await self.say(f"VeSync meldet Rate-Limit - Pause {RATE_LIMIT_PAUSE // 60} min")
+            await self.pub(AVAIL, "offline")
+            return
         except Exception as e:  # noqa: BLE001
             self.fail_count += 1
             transient = is_transient(e)
@@ -307,6 +326,7 @@ class App:
             await self.pub(AVAIL, "offline")
             return
         self.fail_count = 0
+        self.active = any(v.get("status_raw") != "standby" for v in data.values())
         await self.pub(AVAIL, "online")
         if self.had_error:
             self.had_error = False
@@ -316,8 +336,11 @@ class App:
 
     async def poll_loop(self) -> None:
         while True:
+            wait = self.pause_until - asyncio.get_event_loop().time()
+            if wait > 0:
+                await asyncio.sleep(wait)
             await self.poll_once()
-            await asyncio.sleep(POLL)
+            await asyncio.sleep(min(POLL, POLL_ACTIVE) if self.active else POLL)
 
     async def run_action(self, label: str, coros) -> None:
         msgs = []

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+- Adaptives Polling: im Ruhezustand alle `poll_interval` Sekunden (Standard 60), solange ein Programm gesetzt ist oder läuft alle 20 s.
+- Bei einem VeSync-Rate-Limit pausiert das Add-on 10 Minuten, statt neu anzumelden.
+- Cloud-Codes 11910000/11911000/11912000 werden erklärt (Zone 1/2/Grandzone hat schon ein Programm oder kocht).
+
 ## 0.2.1
 - Kurze Netzwerkfehler (z. B. DNS "Name or service not known") bauen die VeSync-Sitzung nicht mehr neu auf; erst nach 3 Fehlversuchen in Folge wird der Status als offline gemeldet.
 

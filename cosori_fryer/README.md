@@ -18,7 +18,7 @@ automatisch per MQTT-Discovery (Mosquitto-Add-on, Zugangsdaten liefert Superviso
 ## Optionen
 - `vesync_email`, `vesync_password`: VeSync-Konto
 - `country_code`: z. B. `DE`
-- `poll_interval`: Status-Abfrage in Sekunden (Standard 30)
+- `poll_interval`: Status-Abfrage im Ruhezustand in Sekunden (Standard 60); läuft ein Programm, wird alle 20 s abgefragt
 - `mqtt_host`/`mqtt_port`/`mqtt_user`/`mqtt_password`: optional, nur wenn der Broker nicht automatisch erkannt wird
 
 ## Hinweise
