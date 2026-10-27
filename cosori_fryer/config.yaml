@@ -1,6 +1,6 @@
 name: "Cosori Fryer"
 description: "Cosori Dual Blaze TwinFry (CAF-TF101S) per VeSync-Cloud und MQTT-Discovery in Home Assistant"
-version: "0.1.0"
+version: "0.2.0"
 slug: "cosori_fryer"
 init: false
 arch:

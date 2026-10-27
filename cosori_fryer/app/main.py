@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Cosori Dual Blaze (CAF-TF101S) -> MQTT-Discovery Bridge fuer Home Assistant.
 
-Pro Zone: Modus, Temperatur, Zeit (Eingaben), Senden/Beenden (Tasten),
-Status/Restzeit/gesetzte Werte (Sensoren). Gestartet wird immer am Geraet
+Drei Bereiche: Zone 1, Zone 2 und Grandzone (beide Zonen zusammen). Je Bereich:
+Modus, Temperatur, Zeit (Eingaben), Senden/Beenden (Tasten), Status/Restzeit/
+gesetzte Werte (Sensoren). Gestartet wird immer am Geraet
 (readyStart=True = Programm vorbereiten, Start per Taste am Geraet).
 """
 import asyncio
@@ -15,7 +16,9 @@ from pathlib import Path
 import aiohttp
 import aiomqtt
 from pyvesync import VeSync
+from pyvesync.const import TemperatureUnits
 from pyvesync.models import fryer_models as models
+from pyvesync.utils.device_mixins import process_bypassv2_result
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("cosori")
@@ -30,15 +33,16 @@ STATE_FILE = Path(os.environ.get("STATE_FILE", "/data/state.json"))
 BASE = "cosori_fryer"
 AVAIL = f"{BASE}/availability"
 MODES = ["AirFry", "Bake", "Roast", "Grill", "Dry", "Reheat"]
-TEMP_MIN, TEMP_MAX, TEMP_STEP = 55, 240, 5
-MIN_MIN, MIN_MAX = 1, 240
+# Bewusst weit: die Cloud entscheidet, was fuer den Modus gueltig ist.
+TEMP_MIN, TEMP_MAX, TEMP_STEP = 35, 240, 5
+MIN_MIN, MIN_MAX = 1, 720
+ZONES = {"1": "Zone 1", "2": "Zone 2", "3": "Grandzone"}
 STATUS_DE = {
-    "standby": "Standby", "cookStop": "Bereit", "cooking": "Kocht",
+    "standby": "Standby", "ready": "Bereit", "cookStop": "Bereit", "cooking": "Kocht",
     "pullOut": "Korb draussen", "completed": "Fertig", "cookEnd": "Fertig",
     "heating": "Heizt", "unknown": "Unbekannt",
 }
-DEFAULTS = {"1": {"mode": "AirFry", "temp": 180, "minutes": 15},
-            "2": {"mode": "AirFry", "temp": 180, "minutes": 15}}
+DEFAULT_ZONE = {"mode": "AirFry", "temp": 180, "minutes": 15}
 
 DEVICE = {
     "identifiers": ["cosori_fryer_caf_tf101s"],
@@ -48,16 +52,16 @@ DEVICE = {
 }
 
 
+class CloudRejected(RuntimeError):
+    """Die VeSync-Cloud hat den Befehl abgelehnt (Verbindung/Login sind in Ordnung)."""
+
+
 def load_state() -> dict:
     try:
         data = json.loads(STATE_FILE.read_text())
-        for z in ("1", "2"):
-            DEFAULTS_Z = dict(DEFAULTS[z])
-            DEFAULTS_Z.update(data.get(z, {}))
-            data[z] = DEFAULTS_Z
-        return data
     except Exception:
-        return json.loads(json.dumps(DEFAULTS))
+        data = {}
+    return {z: {**DEFAULT_ZONE, **data.get(z, {})} for z in ZONES}
 
 
 def save_state(state: dict) -> None:
@@ -65,6 +69,11 @@ def save_state(state: dict) -> None:
         STATE_FILE.write_text(json.dumps(state))
     except Exception as e:  # noqa: BLE001
         log.warning("State nicht speicherbar: %s", e)
+
+
+def idle() -> dict:
+    return {"status": "Standby", "status_raw": "standby", "remaining_min": None,
+            "set_temp": None, "set_minutes": None, "mode": None}
 
 
 class Fryer:
@@ -76,13 +85,14 @@ class Fryer:
         self.lock = asyncio.Lock()
 
     async def close(self) -> None:
-        if self.mgr is not None:
-            try:
-                await self.mgr.__aexit__(None, None, None)
-            except Exception:  # noqa: BLE001
-                pass
-        self.mgr = None
-        self.dev = None
+        async with self.lock:
+            if self.mgr is not None:
+                try:
+                    await self.mgr.__aexit__(None, None, None)
+                except Exception:  # noqa: BLE001
+                    pass
+            self.mgr = None
+            self.dev = None
 
     async def ensure(self) -> None:
         if self.dev is not None:
@@ -102,36 +112,52 @@ class Fryer:
         self.mgr, self.dev = mgr, dev
         log.info("Verbunden mit %s (%s)", dev.device_name, dev.device_type)
 
+    async def _status(self):
+        resp = await self.dev.call_bypassv2_api(
+            payload_method="getAirfryerMultiStatus",
+            payload_update={"subDeviceNo": 0, "subDeviceType": ""},
+        )
+        model = process_bypassv2_result(self.dev, log, "get_details", resp,
+                                        models.FryerDualMultiStatusResult)
+        if model is None:
+            raise RuntimeError(f"Status nicht lesbar: {resp}")
+        self.dev.temp_unit = TemperatureUnits.from_string(model.tempUnit)
+        return model
+
     async def refresh(self) -> dict:
         async with self.lock:
             await self.ensure()
-            await self.dev.get_details()
-            out = {}
-            for z in (1, 2):
-                s = getattr(self.dev, f"state_chamber_{z}")
-                raw = getattr(s.cook_status, "value", str(s.cook_status))
-                last = s.cook_last_time
-                out[str(z)] = {
+            model = await self._status()
+            items = {it.chamber: it for it in model.statusList}
+            out = {z: idle() for z in ZONES}
+            for ch, it in items.items():
+                if str(ch) not in out:
+                    continue
+                raw = it.cookStatus
+                if raw == "standby":
+                    continue
+                out[str(ch)] = {
                     "status": STATUS_DE.get(raw, raw),
                     "status_raw": raw,
-                    "remaining_min": None if last is None else round(last / 60, 1),
-                    "set_temp": s.cook_set_temp,
-                    "set_minutes": None if s.cook_set_time is None else round(s.cook_set_time / 60, 1),
-                    "mode": s.cook_mode,
+                    "remaining_min": round(it.currentRemainingTime / 60, 1),
+                    "set_temp": it.cookTemp,
+                    "set_minutes": round(it.cookSetTime / 60, 1),
+                    "mode": it.mode,
                 }
+            if 3 in items and items[3].cookStatus != "standby":
+                for z in ("1", "2"):
+                    out[z]["status"] = "Grandzone"
             return out
 
     async def send_zone(self, zone: int, cfg: dict) -> str:
         async with self.lock:
             await self.ensure()
             d = self.dev
-            await d.get_details()
+            await self._status()
             unit = d.temp_unit.code
             temp_c = int(round(cfg["temp"] / TEMP_STEP) * TEMP_STEP)
             temp_c = max(TEMP_MIN, min(TEMP_MAX, temp_c))
-            temp = temp_c if unit == "c" else d.round_temperature(round(temp_c * 9 / 5 + 32))
-            if not d.validate_temperature(temp):
-                raise ValueError(f"Temperatur {temp} {unit.upper()} ausserhalb des Bereichs")
+            temp = temp_c if unit == "c" else round(temp_c * 9 / 5 + 32)
             d.sync_chambers = False
             recipe = replace(d.default_preset, cook_time=int(cfg["minutes"]) * 60,
                              target_temp=temp, cook_mode=cfg["mode"])
@@ -142,10 +168,13 @@ class Fryer:
                 "readyStart": True, "syncType": 0, "tempUnit": unit, "workChamber": zone,
             })
             resp = await d.call_bypassv2_api(payload_method="startMultiCook", data=data.to_dict())
-            ok = bool(resp) and resp.get("code") == 0 and (resp.get("result") or {}).get("code", 0) == 0
-            if not ok:
-                raise RuntimeError(f"Cloud-Antwort: {resp}")
-            return f"Zone {zone}: {cfg['mode']} {temp_c} C {cfg['minutes']} min gesendet"
+            label = f"{ZONES[str(zone)]}: {cfg['mode']} {temp_c} C {cfg['minutes']} min"
+            outer = (resp or {}).get("code")
+            inner = ((resp or {}).get("result") or {}).get("code", 0)
+            if outer != 0 or inner != 0:
+                raise CloudRejected(f"{label} abgelehnt (Cloud-Code {inner or outer}); "
+                                    "Temperatur/Zeit passen evtl. nicht zum Modus")
+            return f"{label} gesendet"
 
     async def end_zone(self, zone: int) -> str:
         async with self.lock:
@@ -153,8 +182,8 @@ class Fryer:
             self.dev.sync_chambers = False
             ok = await self.dev.end(chamber=zone)
             if not ok:
-                raise RuntimeError(f"Zone {zone}: Beenden wurde nicht bestaetigt")
-            return f"Zone {zone}: beendet"
+                raise CloudRejected(f"{ZONES[str(zone)]}: Beenden nicht bestaetigt")
+            return f"{ZONES[str(zone)]}: beendet"
 
 
 def disc(component: str, obj: str, cfg: dict) -> tuple[str, str]:
@@ -170,39 +199,39 @@ def disc(component: str, obj: str, cfg: dict) -> tuple[str, str]:
 
 def discovery_messages() -> list[tuple[str, str]]:
     msgs = []
-    for z in ("1", "2"):
+    for z, label in ZONES.items():
         t = f"{BASE}/z{z}"
         msgs.append(disc("select", f"z{z}_modus", {
-            "name": f"Zone {z} Modus", "options": MODES,
+            "name": f"{label} Modus", "options": MODES,
             "command_topic": f"{t}/mode/set", "state_topic": f"{t}/mode/state", "icon": "mdi:chef-hat"}))
         msgs.append(disc("number", f"z{z}_temperatur", {
-            "name": f"Zone {z} Temperatur", "min": TEMP_MIN, "max": TEMP_MAX, "step": TEMP_STEP,
+            "name": f"{label} Temperatur", "min": TEMP_MIN, "max": TEMP_MAX, "step": TEMP_STEP,
             "mode": "box", "unit_of_measurement": "°C", "device_class": "temperature",
             "command_topic": f"{t}/temp/set", "state_topic": f"{t}/temp/state"}))
         msgs.append(disc("number", f"z{z}_zeit", {
-            "name": f"Zone {z} Zeit", "min": MIN_MIN, "max": MIN_MAX, "step": 1,
+            "name": f"{label} Zeit", "min": MIN_MIN, "max": MIN_MAX, "step": 1,
             "mode": "box", "unit_of_measurement": "min", "icon": "mdi:timer-outline",
             "command_topic": f"{t}/minutes/set", "state_topic": f"{t}/minutes/state"}))
         msgs.append(disc("button", f"z{z}_senden", {
-            "name": f"Zone {z} Programm senden", "command_topic": f"{t}/send/press",
+            "name": f"{label} Programm senden", "command_topic": f"{t}/send/press",
             "payload_press": "PRESS", "icon": "mdi:send"}))
         msgs.append(disc("button", f"z{z}_beenden", {
-            "name": f"Zone {z} Beenden", "command_topic": f"{t}/end/press",
+            "name": f"{label} Beenden", "command_topic": f"{t}/end/press",
             "payload_press": "PRESS", "icon": "mdi:stop"}))
         st = f"{t}/state"
         msgs.append(disc("sensor", f"z{z}_status", {
-            "name": f"Zone {z} Status", "state_topic": st,
+            "name": f"{label} Status", "state_topic": st,
             "value_template": "{{ value_json.status }}", "icon": "mdi:air-fryer"}))
         msgs.append(disc("sensor", f"z{z}_restzeit", {
-            "name": f"Zone {z} Restzeit", "state_topic": st,
+            "name": f"{label} Restzeit", "state_topic": st,
             "value_template": "{{ value_json.remaining_min | default(none) }}",
             "unit_of_measurement": "min", "icon": "mdi:timer-sand"}))
         msgs.append(disc("sensor", f"z{z}_gesetzte_temperatur", {
-            "name": f"Zone {z} Gesetzte Temperatur", "state_topic": st,
+            "name": f"{label} Gesetzte Temperatur", "state_topic": st,
             "value_template": "{{ value_json.set_temp | default(none) }}",
             "unit_of_measurement": "°C", "device_class": "temperature"}))
         msgs.append(disc("sensor", f"z{z}_gesetzte_zeit", {
-            "name": f"Zone {z} Gesetzte Zeit", "state_topic": st,
+            "name": f"{label} Gesetzte Zeit", "state_topic": st,
             "value_template": "{{ value_json.set_minutes | default(none) }}",
             "unit_of_measurement": "min"}))
     msgs.append(disc("button", "beide_senden", {
@@ -238,6 +267,7 @@ class App:
         self.fryer = Fryer()
         self.state = load_state()
         self.client: aiomqtt.Client | None = None
+        self.had_error = False
 
     async def pub(self, topic: str, payload, retain: bool = True) -> None:
         await self.client.publish(topic, payload if isinstance(payload, (str, bytes)) else json.dumps(payload),
@@ -248,7 +278,7 @@ class App:
         await self.pub(f"{BASE}/message", text[:250])
 
     async def publish_inputs(self) -> None:
-        for z in ("1", "2"):
+        for z in ZONES:
             c = self.state[z]
             await self.pub(f"{BASE}/z{z}/mode/state", c["mode"])
             await self.pub(f"{BASE}/z{z}/temp/state", str(c["temp"]))
@@ -259,10 +289,14 @@ class App:
             data = await self.fryer.refresh()
         except Exception as e:  # noqa: BLE001
             await self.fryer.close()
+            self.had_error = True
             await self.say(f"VeSync-Fehler beim Status: {e}")
             await self.pub(AVAIL, "offline")
             return
         await self.pub(AVAIL, "online")
+        if self.had_error:
+            self.had_error = False
+            await self.say("Verbunden, Status wird wieder abgefragt")
         for z, v in data.items():
             await self.pub(f"{BASE}/z{z}/state", v)
 
@@ -279,6 +313,9 @@ class App:
                     await asyncio.sleep(2)
                 msgs.append(await make())
             await self.say("OK - " + " | ".join(msgs))
+        except CloudRejected as e:
+            # Verbindung ist in Ordnung, nur der Befehl wurde abgelehnt
+            await self.say(f"Fehler: {e}")
         except Exception as e:  # noqa: BLE001
             await self.fryer.close()
             await self.say(f"Fehler ({label}): {e}")
@@ -309,12 +346,12 @@ class App:
                 return
             save_state(self.state)
             await self.publish_inputs()
-        elif topic == f"{BASE}/z1/send/press" or topic == f"{BASE}/z2/send/press":
+        elif len(parts) == 4 and parts[1].startswith("z") and parts[1][1:] in ZONES and parts[2] == "send":
             z = int(parts[1][1:])
-            await self.run_action(f"Zone {z} senden", [lambda: self.fryer.send_zone(z, self.state[str(z)])])
-        elif topic == f"{BASE}/z1/end/press" or topic == f"{BASE}/z2/end/press":
+            await self.run_action(f"{ZONES[str(z)]} senden", [lambda: self.fryer.send_zone(z, self.state[str(z)])])
+        elif len(parts) == 4 and parts[1].startswith("z") and parts[1][1:] in ZONES and parts[2] == "end":
             z = int(parts[1][1:])
-            await self.run_action(f"Zone {z} beenden", [lambda: self.fryer.end_zone(z)])
+            await self.run_action(f"{ZONES[str(z)]} beenden", [lambda: self.fryer.end_zone(z)])
         elif topic == f"{BASE}/both/send/press":
             await self.run_action("beide senden", [
                 lambda: self.fryer.send_zone(1, self.state["1"]),

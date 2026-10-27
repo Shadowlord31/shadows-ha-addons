@@ -4,7 +4,7 @@ Bindet die **Cosori Dual Blaze TwinFry (CAF-TF101S)** per VeSync-Cloud in Home A
 weil die eingebaute VeSync-Integration dieses Modell nicht kennt. Die Entitäten entstehen
 automatisch per MQTT-Discovery (Mosquitto-Add-on, Zugangsdaten liefert Supervisor).
 
-## Entitäten (je Zone 1 und 2)
+## Entitäten (je Zone 1, Zone 2 und Grandzone)
 - Select: Modus (AirFry, Bake, Roast, Grill, Dry, Reheat)
 - Number: Temperatur (°C, 5er-Schritte), Zeit (Minuten)
 - Buttons: Programm senden, Beenden; dazu "Beide Zonen senden/beenden"
@@ -22,6 +22,7 @@ automatisch per MQTT-Discovery (Mosquitto-Add-on, Zugangsdaten liefert Superviso
 - `mqtt_host`/`mqtt_port`/`mqtt_user`/`mqtt_password`: optional, nur wenn der Broker nicht automatisch erkannt wird
 
 ## Hinweise
-- Getestet: Modus AirFry, beide Zonen unabhängig. Die anderen Modi sind ungetestet; zeigt das Gerät
-  einen falschen Modus an, braucht der Modus eine eigene Rezept-ID.
+- Grandzone = beide Zonen zusammen (ein Programm für den ganzen Garraum). Nicht gleichzeitig mit Zone 1/2 nutzen.
+- AirFry, Bake, Roast und Reheat werden von der Cloud angenommen. Dry und Grill lehnen Werte außerhalb ihres Bereichs ab
+  (Fehlercode steht in "Letzte Meldung"); die gültigen Bereiche je Modus stehen in der VeSync-App.
 - pyvesync wird aus einem festen Commit des Dual-Blaze-Entwicklungszweigs installiert (siehe Dockerfile).
