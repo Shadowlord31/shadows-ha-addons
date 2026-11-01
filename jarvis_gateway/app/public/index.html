@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis Gateway</title>
+<style>
+:root{--deep:#12335c;--mid:#2471a3;--light:#5dade2;--pale:#d6eaf8;--cream:#f4f7fb;--cream-dark:#dde5ee;--text:#1f2a37;--muted:#5f6c7b;--white:#fff;--shadow:rgba(18,51,92,.13);--red:#c0392b;--green:#2e8b57;--orange:#e67e22;--orange-pale:#fdebd0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+header{background:linear-gradient(135deg,var(--deep),var(--mid));color:var(--white);padding:10px 16px 0;text-align:center}
+header h1{font-size:1.25rem;letter-spacing:.02em}
+.sub{font-size:.8rem;opacity:.85;margin-bottom:8px}
+nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding-bottom:8px}
+.nav-tab{background:rgba(255,255,255,.15);color:var(--white);border:none;border-radius:20px;padding:8px 16px;font-size:.9rem;font-weight:600;cursor:pointer}
+.nav-tab.active{background:rgba(255,255,255,.95);color:var(--deep)}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.card{background:var(--white);border-radius:14px;box-shadow:0 4px 20px var(--shadow);padding:16px;margin-bottom:16px;border:1px solid var(--cream-dark)}
+.card-title{font-size:1.1rem;color:var(--deep);margin-bottom:12px;font-weight:700}
+label{display:block;font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--cream-dark);border-radius:8px;font:inherit;font-size:.95rem;color:var(--text);background:var(--cream);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--light);background:var(--white)}
+input[type=checkbox]{width:auto;accent-color:var(--mid)}
+.btn{background:linear-gradient(135deg,var(--mid),var(--deep));color:var(--white);border:none;border-radius:9px;padding:10px 16px;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer}
+.btn.sec{background:var(--pale);color:var(--deep)}
+.btn.danger{background:linear-gradient(135deg,#d35446,var(--red))}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1;min-width:130px}
+.row>.btn,.row>.fit{flex:0 0 auto;min-width:0}
+.chk{display:flex;align-items:center;gap:6px;font-size:.88rem;text-transform:none;letter-spacing:0;color:var(--text);font-weight:500;margin:0;white-space:nowrap}
+.banner{padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:.9rem}
+.banner.bad{background:#fdecea;color:#8a2218;border:1px solid #f5b7b1}
+.banner.ok{background:#e8f6ee;color:#1d6b40;border:1px solid #b6e2c9}
+.banner.warn{background:var(--orange-pale);color:#7a4800}
+.item{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--cream-dark)}
+.item:last-child{border-bottom:none}
+.item .main{flex:1;min-width:0;cursor:pointer}
+.item .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .id{font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{display:inline-block;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700;background:var(--cream-dark);color:var(--muted);white-space:nowrap}
+.badge.read{background:var(--pale);color:var(--deep)}
+.badge.control{background:#d5f0e1;color:#1d6b40}
+.badge.assist{background:var(--orange-pale);color:#7a4800}
+.sel{width:22px;height:22px;flex:0 0 auto}
+.bulk{position:sticky;bottom:0;background:var(--deep);color:var(--white);border-radius:12px;padding:10px;margin-top:10px;display:none;gap:8px;flex-wrap:wrap;align-items:center}
+.bulk.on{display:flex}
+.bulk select{width:auto;flex:1;min-width:120px}
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,40,.55);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.modal-bg.on{display:flex}
+.modal{background:var(--white);width:100%;max-width:720px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px}
+@media(min-width:760px){.modal-bg{align-items:center}.modal{border-radius:18px}}
+.modal h2{font-size:1.1rem;color:var(--deep)}
+.modal .eid{font-size:.8rem;color:var(--muted);margin-bottom:6px}
+.act{border:1px solid var(--cream-dark);border-radius:10px;padding:10px;margin-top:8px}
+.act.off{opacity:.55}
+.act .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.act .hd b{flex:1}
+.act .hd select{width:auto}
+.lim{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:.88rem}
+.lim input[type=number]{width:90px}
+.lim .opts{display:flex;gap:10px;flex-wrap:wrap}
+.foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;position:sticky;bottom:-16px;background:var(--white);padding:10px 0}
+.foot .sp{flex:1}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--cream-dark);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;color:var(--muted)}
+.tw{overflow-x:auto}
+td.res-ok{color:var(--green);font-weight:700}td.res-denied{color:var(--orange);font-weight:700}td.res-error{color:var(--red);font-weight:700}
+.muted{color:var(--muted);font-size:.85rem}
+.hidden{display:none!important}
+pre{white-space:pre-wrap;word-break:break-all;font-size:.78rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ Jarvis Gateway</h1>
+  <div class="sub" id="hdrSub">Schleuse zwischen Jarvis und Home Assistant</div>
+  <nav>
+    <button class="nav-tab active" data-tab="ent">Entitäten</button>
+    <button class="nav-tab" data-tab="log">Protokoll</button>
+    <button class="nav-tab" data-tab="set">Einstellungen</button>
+  </nav>
+</header>
+<main>
+  <div id="banner"></div>
+
+  <section id="tab-ent">
+    <div class="card">
+      <div class="row">
+        <input id="fq" type="search" placeholder="Suchen (Name, entity_id)…">
+        <select id="farea"><option value="">Alle Bereiche</option></select>
+        <select id="fdom"><option value="">Alle Domains</option></select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="chk fit"><input type="checkbox" id="fexp"> nur freigegeben</label>
+        <label class="chk fit"><input type="checkbox" id="fassist"> nur in Assist freigegeben</label>
+        <span class="fit muted" id="count"></span>
+        <button class="btn sec" id="btnAssist">Aus Assist übernehmen</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <label class="chk fit"><input type="checkbox" id="selAll"> Alle sichtbaren wählen</label>
+      </div>
+      <div id="list"></div>
+      <div class="row" style="margin-top:10px"><button class="btn sec" id="more">Mehr anzeigen</button></div>
+    </div>
+    <div class="bulk" id="bulk">
+      <b id="bulkN"></b>
+      <select id="bulkAccess">
+        <option value="off">Zugriff: aus</option>
+        <option value="read">Zugriff: lesen</option>
+        <option value="control">Zugriff: steuern</option>
+      </select>
+      <button class="btn sec" id="bulkApply">Anwenden</button>
+      <button class="btn sec" id="bulkClear">Auswahl aufheben</button>
+    </div>
+  </section>
+
+  <section id="tab-log" class="hidden">
+    <div class="card">
+      <div class="card-title">Protokoll (90 Tage)</div>
+      <div class="row">
+        <input id="lq" type="search" placeholder="Suchen (Entität, Person, Grund)…">
+        <select id="lres"><option value="">Alle Ergebnisse</option><option value="ok">ok</option><option value="denied">abgelehnt</option><option value="error">Fehler</option></select>
+        <input id="lperson" placeholder="Person">
+        <button class="btn" id="lgo">Filtern</button>
+      </div>
+    </div>
+    <div class="card"><div class="tw"><table><thead><tr><th>Zeit</th><th>Entität</th><th>Aktion</th><th>Werte</th><th>Person</th><th>Rolle</th><th>Ergebnis</th><th>Grund</th></tr></thead><tbody id="lbody"></tbody></table></div>
+      <div class="row" style="margin-top:10px"><span class="muted" id="ltotal"></span><button class="btn sec" id="lmore">Mehr laden</button></div></div>
+  </section>
+
+  <section id="tab-set" class="hidden">
+    <div class="card">
+      <div class="card-title">Status</div>
+      <pre id="status"></pre>
+    </div>
+    <div class="card">
+      <div class="card-title">Export / Import</div>
+      <p class="muted">Der Export enthält nur die Einstellungen der Entitäten, keine Tokens.</p>
+      <div class="row" style="margin-top:10px">
+        <a class="btn sec" id="dl" href="api/ui/export?download=1" style="text-decoration:none;text-align:center">Einstellungen exportieren</a>
+      </div>
+      <label>Import (JSON-Datei)</label>
+      <input type="file" id="impFile" accept="application/json,.json">
+      <label>Modus</label>
+      <select id="impMode"><option value="merge">Zusammenführen (gleiche IDs werden ersetzt)</option><option value="replace">Alles ersetzen</option></select>
+      <div class="row" style="margin-top:10px"><button class="btn" id="impGo">Importieren</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-bg" id="mbg"><div class="modal" id="modal"></div></div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const k of [].concat(...kids)) if (k != null && k !== false) e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return e;
+}
+async function api(method, path, body) {
+  const res = await fetch('api/ui' + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  let j = null;
+  try { j = await res.json(); } catch { /* leer */ }
+  if (!res.ok) throw new Error((j && j.error) || 'Fehler ' + res.status);
+  return j;
+}
+function banner(msg, kind) {
+  const b = $('banner');
+  b.replaceChildren();
+  if (msg) b.append(h('div', { class: 'banner ' + (kind || 'bad') }, msg));
+  if (kind === 'ok') setTimeout(() => { if (b.textContent === msg) b.replaceChildren(); }, 4000);
+}
+const ACCESS = { off: 'aus', read: 'lesen', control: 'steuern' };
+
+let S = null, META = null;
+const selected = new Set();
+let shown = 100;
+
+async function loadState() {
+  try {
+    S = await api('GET', '/state');
+  } catch (e) { banner('Gateway nicht erreichbar: ' + e.message); return; }
+  banner(S.ha_connected ? '' : 'Home Assistant ist nicht erreichbar' + (S.ha_error ? ' (' + S.ha_error + ')' : '') + ' – Änderungen sind gesperrt, die Verbindung wird automatisch neu aufgebaut.');
+  $('hdrSub').textContent = S.ha_connected ? 'Verbunden mit Home Assistant ' + (S.ha_version || '') : 'Home Assistant nicht verbunden';
+  fillSelect($('farea'), 'Alle Bereiche', S.areas);
+  fillSelect($('fdom'), 'Alle Domains', S.domains);
+  $('fassist').disabled = !S.assist_available;
+  $('btnAssist').disabled = !S.ha_connected;
+  renderList();
+}
+function fillSelect(sel, all, values) {
+  const cur = sel.value;
+  sel.replaceChildren(h('option', { value: '' }, all), ...values.map((v) => h('option', { value: v }, v)));
+  if (values.includes(cur)) sel.value = cur;
+}
+function filtered() {
+  const q = $('fq').value.trim().toLowerCase(), area = $('farea').value, dom = $('fdom').value;
+  const onlyExp = $('fexp').checked, onlyAssist = $('fassist').checked;
+  return S.entities.filter((e) => {
+    if (area && e.area !== area) return false;
+    if (dom && e.domain !== dom) return false;
+    if (onlyExp && !(e.configured && e.access !== 'off')) return false;
+    if (onlyAssist && !e.assist) return false;
+    if (q && !(e.entity_id.includes(q) || (e.ha_name || '').toLowerCase().includes(q) || (e.name || '').toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a, b) => (a.name || a.ha_name || a.entity_id).localeCompare(b.name || b.ha_name || b.entity_id, 'de'));
+}
+let visible = [];
+function renderList() {
+  if (!S) return;
+  visible = filtered();
+  $('count').textContent = visible.length + ' von ' + S.entities.length;
+  const list = $('list');
+  list.replaceChildren();
+  for (const e of visible.slice(0, shown)) {
+    const cb = h('input', { type: 'checkbox', class: 'sel', onchange: () => { cb.checked ? selected.add(e.entity_id) : selected.delete(e.entity_id); updateBulk(); } });
+    cb.checked = selected.has(e.entity_id);
+    list.append(h('div', { class: 'item' }, cb,
+      h('div', { class: 'main', onclick: () => openEdit(e.entity_id) },
+        h('div', { class: 'nm' }, e.name || e.ha_name || e.entity_id),
+        h('div', { class: 'id' }, e.entity_id + (e.area ? ' · ' + e.area : ''))),
+      e.assist ? h('span', { class: 'badge assist' }, 'Assist') : null,
+      h('span', { class: 'badge ' + (e.configured ? e.access : '') }, e.configured ? ACCESS[e.access] : 'nicht freigegeben')));
+  }
+  $('more').classList.toggle('hidden', visible.length <= shown);
+  if (S.missing.length) list.append(h('div', { class: 'banner warn' }, 'Konfiguriert, aber nicht (mehr) in Home Assistant: ' + S.missing.join(', ')));
+  updateBulk();
+}
+function updateBulk() {
+  $('bulk').classList.toggle('on', selected.size > 0);
+  $('bulkN').textContent = selected.size + ' gewählt';
+}
+for (const id of ['fq', 'farea', 'fdom', 'fexp', 'fassist']) $(id).addEventListener('input', () => { shown = 100; renderList(); });
+$('more').onclick = () => { shown += 200; renderList(); };
+$('selAll').onchange = (ev) => { for (const e of visible) ev.target.checked ? selected.add(e.entity_id) : selected.delete(e.entity_id); renderList(); };
+$('bulkClear').onclick = () => { selected.clear(); $('selAll').checked = false; renderList(); };
+$('bulkApply').onclick = async () => {
+  try {
+    const r = await api('POST', '/bulk', { entity_ids: [...selected], access: $('bulkAccess').value });
+    banner(r.changed + ' Entitäten geändert' + (r.skipped.length ? ', ' + r.skipped.length + ' übersprungen' : ''), 'ok');
+    selected.clear(); $('selAll').checked = false;
+    await loadState();
+  } catch (e) { banner(e.message); }
+};
+
+/* ---- Modal ---- */
+function closeModal() { $('mbg').classList.remove('on'); $('modal').replaceChildren(); }
+$('mbg').addEventListener('click', (ev) => { if (ev.target === $('mbg')) closeModal(); });
+
+async function openEdit(id) {
+  let d;
+  try { d = await api('GET', '/entity/' + encodeURIComponent(id)); } catch (e) { banner(e.message); return; }
+  const cfg = JSON.parse(JSON.stringify(d.config));
+  const tpl = META.actions[d.domain] || {};
+  const attrList = META.attributes[d.domain] || [];
+  const m = $('modal');
+
+  const access = h('select', {}, ...Object.entries(ACCESS).map(([v, l]) => h('option', { value: v }, l)));
+  if (!d.configured) cfg.access = 'off';
+  access.value = cfg.access;
+  const name = h('input', { value: cfg.name || '', placeholder: d.ha_name || '' });
+  const aliases = h('input', { value: (cfg.aliases || []).join(', '), placeholder: 'Komma-getrennt' });
+  const room = h('input', { value: cfg.room || '', placeholder: d.area || '' });
+  const confirm = h('select', {}, h('option', { value: 0 }, '0 – direkt ausführen'), h('option', { value: 1 }, '1 – kurz bestätigen'), h('option', { value: 2 }, '2 – ausdrücklich bestätigen'));
+  confirm.value = cfg.confirm;
+  const minRole = h('select', {}, h('option', { value: 'all' }, 'alle'), h('option', { value: 'erwachsen' }, 'erwachsen'), h('option', { value: 'admin' }, 'admin'));
+  minRole.value = cfg.min_role;
+  const qOn = h('input', { type: 'checkbox' }); qOn.checked = !!cfg.quiet;
+  const qFrom = h('input', { type: 'time', value: cfg.quiet ? cfg.quiet.from : '22:00' });
+  const qTo = h('input', { type: 'time', value: cfg.quiet ? cfg.quiet.to : '06:00' });
+
+  const actionEls = {};
+  const actBox = h('div');
+  for (const [an, at] of Object.entries(tpl)) {
+    const ac = cfg.actions[an] || { enabled: false, min_role: at.defaultMinRole || 'all', limits: {} };
+    const en = h('input', { type: 'checkbox' }); en.checked = !!ac.enabled;
+    const role = h('select', {}, h('option', { value: 'all' }, 'alle'), h('option', { value: 'erwachsen' }, 'erwachsen'), h('option', { value: 'admin' }, 'admin'));
+    role.value = ac.min_role;
+    const box = h('div', { class: 'act' + (ac.enabled ? '' : ' off') });
+    const limEls = {};
+    const lims = h('div');
+    for (const [pn, ps] of Object.entries(at.params)) {
+      const lim = ac.limits[pn] || (d.defaults.actions[an] && d.defaults.actions[an].limits[pn]);
+      if (ps.type === 'int' || ps.type === 'number') {
+        const lo = h('input', { type: 'number', step: ps.type === 'int' ? 1 : 'any', min: ps.min, max: ps.max, value: lim ? lim.min : ps.min });
+        const hi = h('input', { type: 'number', step: ps.type === 'int' ? 1 : 'any', min: ps.min, max: ps.max, value: lim ? lim.max : ps.max });
+        limEls[pn] = { kind: 'range', lo, hi, step: ps.type };
+        lims.append(h('div', { class: 'lim' }, h('span', {}, (ps.label || pn) + ' von'), lo, h('span', {}, 'bis'), hi, h('span', { class: 'muted' }, ps.unit || '')));
+      } else if (ps.type === 'choice') {
+        const all = [...new Set([...(d.defaults.actions[an]?.limits[pn]?.allowed || []), ...(lim?.allowed || [])])];
+        const set = new Set(lim ? lim.allowed : all);
+        const cbs = all.map((v) => { const c = h('input', { type: 'checkbox' }); c.checked = set.has(v); return [v, c]; });
+        limEls[pn] = { kind: 'choice', cbs };
+        lims.append(h('div', { class: 'lim' }, h('span', {}, (ps.label || pn) + ':'), h('div', { class: 'opts' }, ...cbs.map(([v, c]) => h('label', { class: 'chk' }, c, v)))));
+      } else {
+        lims.append(h('div', { class: 'lim muted' }, (ps.label || pn) + ' (keine Begrenzung nötig)'));
+      }
+    }
+    en.onchange = () => box.classList.toggle('off', !en.checked);
+    box.append(h('div', { class: 'hd' }, h('label', { class: 'chk' }, en, h('b', {}, at.label)), h('span', { class: 'muted' }, an), h('span', { class: 'muted' }, 'ab Rolle'), role), lims);
+    actionEls[an] = { en, role, limEls };
+    actBox.append(box);
+  }
+
+  const attrEls = attrList.map((a) => { const c = h('input', { type: 'checkbox' }); c.checked = (cfg.attributes || []).includes(a); return [a, c]; });
+
+  function collect() {
+    const actions = {};
+    for (const [an, el] of Object.entries(actionEls)) {
+      const limits = {};
+      for (const [pn, le] of Object.entries(el.limEls)) {
+        if (le.kind === 'range') limits[pn] = { min: Number(le.lo.value), max: Number(le.hi.value) };
+        else limits[pn] = { allowed: le.cbs.filter(([, c]) => c.checked).map(([v]) => v) };
+      }
+      actions[an] = { enabled: el.en.checked, min_role: el.role.value, limits };
+    }
+    return {
+      access: access.value,
+      name: name.value.trim() || null,
+      aliases: aliases.value.split(',').map((s) => s.trim()).filter(Boolean),
+      room: room.value.trim() || null,
+      actions,
+      confirm: Number(confirm.value),
+      min_role: minRole.value,
+      quiet: qOn.checked ? { from: qFrom.value, to: qTo.value } : null,
+      attributes: attrEls.filter(([, c]) => c.checked).map(([a]) => a),
+    };
+  }
+
+  const msg = h('div');
+  const isCtl = Object.keys(tpl).length > 0;
+  m.replaceChildren(
+    h('h2', {}, d.ha_name || id),
+    h('div', { class: 'eid' }, id + ' · Zustand: ' + (d.state ?? '–') + (d.area ? ' · ' + d.area : '')),
+    msg,
+    h('label', {}, 'Zugriff'), access,
+    h('div', { class: 'row' },
+      h('div', {}, h('label', {}, 'Sprachname'), name),
+      h('div', {}, h('label', {}, 'Raum'), room)),
+    h('label', {}, 'Aliase'), aliases,
+    isCtl ? h('div', {}, h('label', {}, 'Erlaubte Aktionen und Grenzen'), actBox,
+      h('div', { class: 'row' },
+        h('div', {}, h('label', {}, 'Bestätigung'), confirm),
+        h('div', {}, h('label', {}, 'Mindestrolle gesamt'), minRole)),
+      h('label', { class: 'chk', style: 'margin-top:12px' }, qOn, 'Ruhezeit (Steuern verweigern, Europe/Berlin)'),
+      h('div', { class: 'row' }, h('div', {}, h('label', {}, 'von'), qFrom), h('div', {}, h('label', {}, 'bis'), qTo))) : null,
+    attrList.length ? h('div', {}, h('label', {}, 'Lesbare Attribute'), h('div', { class: 'lim' }, h('div', { class: 'opts' }, ...attrEls.map(([a, c]) => h('label', { class: 'chk' }, c, a))))) : h('p', { class: 'muted', style: 'margin-top:10px' }, 'Für diese Domain sind nur Zustand und Name lesbar.'),
+    h('div', { class: 'foot' },
+      h('button', { class: 'btn', onclick: async () => {
+        try { await api('PUT', '/entity/' + encodeURIComponent(id), collect()); closeModal(); banner('Gespeichert', 'ok'); await loadState(); }
+        catch (e) { msg.replaceChildren(h('div', { class: 'banner bad' }, e.message)); m.scrollTop = 0; }
+      } }, 'Speichern'),
+      h('button', { class: 'btn sec', onclick: closeModal }, 'Abbrechen'),
+      h('span', { class: 'sp' }),
+      d.configured ? h('button', { class: 'btn danger', onclick: async () => {
+        if (!confirmDlg('Freigabe und Einstellungen dieser Entität löschen?')) return;
+        try { await api('DELETE', '/entity/' + encodeURIComponent(id)); closeModal(); await loadState(); } catch (e) { msg.replaceChildren(h('div', { class: 'banner bad' }, e.message)); }
+      } }, 'Löschen') : null));
+  $('mbg').classList.add('on');
+  m.scrollTop = 0;
+}
+function confirmDlg(t) { return window.confirm(t); }
+
+/* ---- Assist ---- */
+$('btnAssist').onclick = async () => {
+  let p;
+  try { p = await api('GET', '/assist-preview'); } catch (e) { banner(e.message); return; }
+  const m = $('modal');
+  if (!p.items.length) {
+    m.replaceChildren(h('h2', {}, 'Aus Assist übernehmen'), h('p', { class: 'muted', style: 'margin:12px 0' }, 'Keine neuen Entitäten gefunden.' + (p.already_configured ? ' ' + p.already_configured + ' sind bereits konfiguriert und bleiben unverändert.' : '')), h('div', { class: 'foot' }, h('button', { class: 'btn sec', onclick: closeModal }, 'Schließen')));
+    $('mbg').classList.add('on');
+    return;
+  }
+  const picks = p.items.map((i) => { const c = h('input', { type: 'checkbox' }); c.checked = true; return [i, c]; });
+  m.replaceChildren(
+    h('h2', {}, 'Aus Assist übernehmen'),
+    h('p', { class: 'muted', style: 'margin:8px 0' }, 'Vorschlag mit Standardwerten. Erst nach „Übernehmen“ wird gespeichert. ' + (p.already_configured ? p.already_configured + ' bereits konfigurierte Entitäten bleiben unverändert.' : '')),
+    h('div', {}, ...picks.map(([i, c]) => h('div', { class: 'item' }, c,
+      h('div', { class: 'main' }, h('div', { class: 'nm' }, i.name), h('div', { class: 'id' }, i.entity_id + (i.area ? ' · ' + i.area : ''))),
+      h('span', { class: 'badge ' + i.proposed.access }, ACCESS[i.proposed.access]),
+      i.proposed.confirm ? h('span', { class: 'badge' }, 'Bestätigung ' + i.proposed.confirm) : null,
+      i.proposed.min_role !== 'all' ? h('span', { class: 'badge' }, 'ab ' + i.proposed.min_role) : null))),
+    h('div', { class: 'foot' },
+      h('button', { class: 'btn', onclick: async () => {
+        const ids = picks.filter(([, c]) => c.checked).map(([i]) => i.entity_id);
+        if (!ids.length) return;
+        try { const r = await api('POST', '/assist-import', { entity_ids: ids }); closeModal(); banner(r.imported.length + ' übernommen, ' + r.skipped.length + ' übersprungen', 'ok'); await loadState(); }
+        catch (e) { banner(e.message); closeModal(); }
+      } }, 'Übernehmen'),
+      h('button', { class: 'btn sec', onclick: closeModal }, 'Abbrechen')));
+  $('mbg').classList.add('on');
+};
+
+/* ---- Protokoll ---- */
+let logOffset = 0;
+async function loadLog(reset) {
+  if (reset) { logOffset = 0; $('lbody').replaceChildren(); }
+  const q = new URLSearchParams({ limit: 100, offset: logOffset });
+  if ($('lq').value.trim()) q.set('q', $('lq').value.trim());
+  if ($('lres').value) q.set('result', $('lres').value);
+  if ($('lperson').value.trim()) q.set('person', $('lperson').value.trim());
+  try {
+    const r = await api('GET', '/audit?' + q);
+    for (const e of r.items) {
+      $('lbody').append(h('tr', {},
+        h('td', {}, new Date(e.ts).toLocaleString('de-DE')),
+        h('td', {}, e.entity_id || e.name || ''),
+        h('td', {}, e.action || ''),
+        h('td', {}, e.params && Object.keys(e.params).length ? JSON.stringify(e.params) : ''),
+        h('td', {}, e.person || ''),
+        h('td', {}, e.role || ''),
+        h('td', { class: 'res-' + e.result }, e.result),
+        h('td', {}, e.reason || '')));
+    }
+    logOffset += r.items.length;
+    $('ltotal').textContent = Math.min(logOffset, r.total) + ' von ' + r.total;
+    $('lmore').classList.toggle('hidden', logOffset >= r.total);
+  } catch (e) { banner(e.message); }
+}
+$('lgo').onclick = () => loadLog(true);
+$('lmore').onclick = () => loadLog(false);
+
+/* ---- Einstellungen ---- */
+async function loadStatus() {
+  await loadState();
+  if (!S) return;
+  const cfgd = S.entities.filter((e) => e.configured);
+  $('status').textContent = [
+    'Home Assistant: ' + (S.ha_connected ? 'verbunden (' + S.ha_version + ')' : 'nicht verbunden'),
+    'Entitäten in HA: ' + S.entities.length,
+    'Konfiguriert: ' + cfgd.length + ' (freigegeben: ' + cfgd.filter((e) => e.access !== 'off').length + ', steuerbar: ' + cfgd.filter((e) => e.access === 'control').length + ')',
+    'Assist-Abgleich: ' + (S.assist_available ? 'verfügbar' : 'nicht verfügbar'),
+  ].join('\n');
+}
+$('impGo').onclick = async () => {
+  const f = $('impFile').files[0];
+  if (!f) { banner('Bitte eine JSON-Datei wählen'); return; }
+  let data;
+  try { data = JSON.parse(await f.text()); } catch { banner('Datei ist kein gültiges JSON'); return; }
+  const mode = $('impMode').value;
+  if (mode === 'replace' && !confirmDlg('Alle bestehenden Einstellungen werden ersetzt (eine Sicherung bleibt erhalten). Fortfahren?')) return;
+  try { const r = await api('POST', '/import', { ...data, mode }); banner(r.imported + ' Einträge importiert', 'ok'); await loadStatus(); } catch (e) { banner(e.message); }
+};
+
+/* ---- Tabs ---- */
+document.querySelectorAll('.nav-tab').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.nav-tab').forEach((x) => x.classList.toggle('active', x === b));
+  for (const t of ['ent', 'log', 'set']) $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab);
+  banner('');
+  if (b.dataset.tab === 'log') loadLog(true);
+  if (b.dataset.tab === 'set') loadStatus();
+  if (b.dataset.tab === 'ent') loadState();
+}));
+
+(async () => {
+  try { META = await api('GET', '/meta'); } catch (e) { banner('Gateway nicht erreichbar: ' + e.message); return; }
+  await loadState();
+  setInterval(() => { if (!$('tab-ent').classList.contains('hidden') && !$('mbg').classList.contains('on') && !selected.size) loadState(); }, 15000);
+})();
+</script>
+</body>
+</html>
