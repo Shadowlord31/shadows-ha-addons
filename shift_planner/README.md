@@ -22,15 +22,57 @@ Kein eigenes Benutzerkonto/Passwort mehr — die App erkennt den eingeloggten HA
 selbstständig ein Profil an. Kein Admin/User-Rollenmodell: jeder identifizierte HA-Nutzer verwaltet
 sowohl seine eigenen Daten als auch seine eigenen Feiertage — HA übernimmt die Benutzerverwaltung.
 
-**Wichtig:** Die App ist nur über den Ingress-Zugang (Sidebar-Panel bzw. "Weboberfläche öffnen" in
-den Add-on-Einstellungen) nutzbar. Ein direkter Port-Zugriff würde die Ingress-Header umgehen und
-landet auf der reinen Leseansicht ohne Login.
+**Wichtig:** Die App selbst (Dienstplan bearbeiten, Urlaub eintragen, Einstellungen, …) ist nur über
+den Ingress-Zugang (Sidebar-Panel bzw. "Weboberfläche öffnen" in den Add-on-Einstellungen) nutzbar.
+Ein direkter Port-Zugriff (falls im Netzwerk-Tab aktiviert, siehe unten) würde die Ingress-Header
+umgehen und landet auf der reinen Leseansicht ohne Login — mit Ausnahme der über `X-API-Token`
+abgesicherten `/api/dp/integration/*`-Routen für externe Integrationen.
 
 ## Konfiguration
 
 | Option | Beschreibung |
 |---|---|
-| `api_token` | Beliebiges, selbst gewähltes Token für den [Companion-Integration](https://github.com/Shadowlord31/ha-shift-planner)-Zugang (siehe unten). Leer lassen, wenn die Integration nicht genutzt wird. |
+| `api_token` | Beliebiges, selbst gewähltes Token für den [Companion-Integration](https://github.com/Shadowlord31/ha-shift-planner)-Zugang und für externe Integrationen über den optionalen Netzwerk-Port (siehe unten). Leer lassen, wenn keins davon genutzt wird. |
+
+## Optionaler Netzwerk-Port (für externe Integrationen im LAN)
+
+Standardmäßig läuft das Add-on weiterhin **nur über Ingress** (kein Port exponiert). Wer einen
+eigenen Dienst im LAN hat, der *nicht* über HA/Ingress läuft (z.B. einen eigenen Assistenten), kann
+im Netzwerk-Tab der Add-on-Einstellungen optional einen Host-Port für `3001/tcp` setzen. Danach ist
+die App zusätzlich direkt unter `http://<host>:<port>` erreichbar.
+
+**Sicherheit:**
+- Die normale Oberfläche (Dienstplan, Arbeitszeit, Urlaub, Einstellungen, …) bleibt bei direktem
+  Port-Zugriff weiterhin nur als reine Leseansicht ohne Login sichtbar — ohne die Ingress-Header
+  gibt es dort keinen angemeldeten Nutzer, alle schreibenden bzw. nutzerbezogenen Routen antworten
+  mit 401.
+- Nur die Routen unter `/api/dp/integration/*` (siehe unten) akzeptieren direkten Port-Zugriff zum
+  Lesen **und Schreiben** — abgesichert über den `X-API-Token`-Header gegen das oben gesetzte
+  `api_token`. Ohne oder mit falschem Token: 401. Ist kein `api_token` gesetzt: 403.
+- Empfehlung: Port nur aktivieren, wenn er wirklich gebraucht wird, und `api_token` auf ein langes,
+  zufälliges Token setzen.
+
+## Integrations-API (`/api/dp/integration/*`, `X-API-Token`-Header erforderlich)
+
+Für eigene Skripte/Automationen (z.B. einen Assistenten im LAN), die Schichten und Urlaub lesen
+*und schreiben* sollen. Jede Anfrage braucht den Header `X-API-Token: <api_token>`.
+
+| Methode & Pfad | Beschreibung |
+|---|---|
+| `GET /summary` | Übersicht aller Nutzer (nächste Schicht, im Dienst jetzt, Urlaub) |
+| `GET /shifts?username=&start=&end=` | Schichten eines Nutzers im Zeitraum |
+| `GET /shift-types?username=` | Schichtarten eines Nutzers |
+| `GET /vacations?username=&year=` | Urlaube eines Nutzers (optional nach Jahr gefiltert) |
+| `PUT /shift` | Schicht eines Tages anlegen/ersetzen: `{username, date, shift_type, actual_start?, actual_end?}` — `shift_type` ist Kürzel, Name oder ID |
+| `DELETE /shift` | Schicht eines Tages entfernen: `{username, date}` |
+| `POST /vacation` | Urlaub anlegen: `{username, start_date, end_date, status?, note?}` |
+| `PATCH /vacation/:id` | Urlaub ändern (Teil-Update): `{username, start_date?, end_date?, status?, note?}` — wechselt der Status dabei auf `genommen`, wird wie in der Oberfläche automatisch 8h Arbeitszeit pro Arbeitstag gebucht |
+| `DELETE /vacation/:id?username=` | Urlaub löschen |
+| `POST /checkin` / `POST /checkout` / `POST /worktime` | Arbeitszeiterfassung, siehe [Companion-Integration](https://github.com/Shadowlord31/ha-shift-planner)-README |
+
+Hinweis zu `PUT /shift`: bildet — anders als die Teilschicht-fähige Oberfläche — bewusst nur einen
+einzelnen, autoritativen Schicht-Eintrag pro Tag ab (ersetzt einen evtl. vorhandenen Eintrag
+vollständig, inkl. Notiz).
 
 ## Migration von der alten Postgres-Version
 
@@ -61,5 +103,6 @@ mit dem Add-on. Details zu Entitäten und Services stehen in deren README.
 - Node.js/Express, SQLite (`better-sqlite3`) statt Postgres — Datenbankdatei liegt unter `/data`
 - Docker-Basis: `node:20-bookworm-slim` (glibc) statt Alpine/musl — `better-sqlite3` scheitert auf
   aktuellem Alpine/musl beim Laden (`fcntl64: symbol not found`, ein bekanntes Upstream-Problem)
-- Ingress-only, kein exponierter Host-Port (bewusst kein `webui` in der `config.yaml`, das würde den
-  Ingress-Proxy umgehen)
+- Ingress bleibt der primäre Zugang (bewusst kein `webui` in der `config.yaml`, das würde den
+  Ingress-Proxy umgehen); der Host-Port ist rein optional und standardmäßig deaktiviert (`ports:
+  {"3001/tcp": null}`), siehe "Optionaler Netzwerk-Port" oben

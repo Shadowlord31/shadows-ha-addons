@@ -1,14 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/dienstplan');
+const { workDaysCount, computeVacationRemaining, bookVacationWorkTimes } = require('../lib/shared');
 
 // ===== HELPERS =====
 const b = (v) => (v ? 1 : 0); // JS boolean -> SQLite 0/1
-const workDaysCount = (wd, s, e) => {
-  let c = 0, cur = new Date(s + 'T12:00:00'), end = new Date(e + 'T12:00:00');
-  while (cur <= end) { const dow = cur.getDay(), idx = dow === 0 ? 6 : dow - 1; if (wd[idx] === '1') c++; cur.setDate(cur.getDate() + 1); }
-  return c;
-};
 
 // ===== AUTH (Ingress-Identität, siehe middleware/ingress-auth.js) =====
 function auth(req, res, next) {
@@ -87,17 +83,7 @@ router.get('/api/dp/vacations', auth, (req, res) => {
   res.json(db.prepare(q).all(...p));
 });
 router.get('/api/dp/vacations/remaining/:year', auth, (req, res) => {
-  const u = db.prepare('SELECT vacation_base,vacation_budget,work_days FROM dp_users WHERE id=?').get(req.dpUser.id);
-  const base = u?.vacation_base || u?.vacation_budget || 30;
-  const co = db.prepare('SELECT carryover FROM dp_vacation_carryover WHERE user_id=? AND year=?').get(req.dpUser.id, parseInt(req.params.year));
-  const carryover = co?.carryover || 0;
-  const budget = base + carryover;
-  const wd = u?.work_days || '1111100';
-  const allV = db.prepare("SELECT start_date as s,end_date as e,status FROM dp_vacations WHERE user_id=? AND year=? AND status!='abgelehnt'").all(req.dpUser.id, req.params.year);
-  const used = allV.filter(v => v.status === 'genommen').reduce((s, v) => s + workDaysCount(wd, v.s, v.e), 0);
-  const planned = allV.filter(v => v.status === 'geplant').reduce((s, v) => s + workDaysCount(wd, v.s, v.e), 0);
-  const approved = allV.filter(v => v.status === 'genehmigt').reduce((s, v) => s + workDaysCount(wd, v.s, v.e), 0);
-  res.json({ budget, base, carryover, used, planned, approved, remaining: budget - used - planned - approved, work_days: wd });
+  res.json(computeVacationRemaining(db, req.dpUser.id, parseInt(req.params.year)));
 });
 router.post('/api/dp/vacations', auth, (req, res) => {
   const { start_date, end_date, status, note, year, also_for_users } = req.body;
@@ -127,18 +113,7 @@ router.patch('/api/dp/vacations/:id/status', auth, (req, res) => {
   try {
     const vac = db.prepare('UPDATE dp_vacations SET status=? WHERE id=? AND user_id=? RETURNING id,start_date,end_date,status').get(status, req.params.id, req.dpUser.id);
     if (!vac) return res.status(404).json({ error: 'Nicht gefunden' });
-    if (status === 'genommen') {
-      const usr = db.prepare('SELECT work_days FROM dp_users WHERE id=?').get(req.dpUser.id);
-      const wd2 = usr?.work_days || '1111100';
-      const cur = new Date(vac.start_date + 'T12:00:00'), end2 = new Date(vac.end_date + 'T12:00:00');
-      const upsert = db.prepare(`INSERT INTO dp_work_times (user_id,date,actual_hours,is_vacation,work_type,note) VALUES (?,?,8,1,'vacation','Urlaubstag')
-        ON CONFLICT(user_id,date) DO UPDATE SET actual_hours=8,is_vacation=1,work_type='vacation',note='Urlaubstag'`);
-      while (cur <= end2) {
-        const dow = cur.getDay(), idx = dow === 0 ? 6 : dow - 1;
-        if (wd2[idx] === '1') { const ds = cur.toLocaleDateString('sv-SE'); upsert.run(req.dpUser.id, ds); }
-        cur.setDate(cur.getDate() + 1);
-      }
-    }
+    if (status === 'genommen') bookVacationWorkTimes(db, req.dpUser.id, vac.start_date, vac.end_date);
     res.json({ ok: true, vac });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
