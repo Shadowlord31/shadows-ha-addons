@@ -205,6 +205,19 @@
 - Zusaetzlich: isPlantingActive() erkennt jetzt auch geroderte Dauerbepflanzungs-
   Plaene ohne zugehoerigen Ernte-Eintrag als "nicht mehr aktiv"
 
+## 0.5.0
+
+- Neu: optionaler Netzwerk-Port 3002 (standardmaessig aus, im Netzwerk-Tab des Add-ons setzbar) und
+  Option `api_token` fuer externe Integrationen (z.B. Jarvis, auch hinter einem Reverse Proxy)
+- Neu: Zugriffsschutz vor allen Routen. Zugriff ueber Ingress (Supervisor-Gateway 172.30.32.2) bleibt
+  unveraendert offen. Direkter Zugriff ueber den Port: nur `/garten/api/integration/*` mit gueltigem
+  `X-API-Token` (kein api_token gesetzt: 403, fehlend/falsch: 401, zeitkonstanter Vergleich); alle
+  anderen Routen und die Oberflaeche antworten dort mit 401
+- Neu: Token-Routen unter `/garten/api/integration/` mit Namen statt IDs. Lesen: overview, beds,
+  plants, plant-families, entries, harvest, costs, plans, crop-rotation. Schreiben (kein Loeschen):
+  POST entry, POST cost, PATCH plan/:id (nur done und note)
+- UI, bestehende `/garten/api`-Routen und die Lovelace-Karten (nutzen die Ingress-URL) bleiben unveraendert
+
 ## 0.4.20
 
 - Fruchtfolge-Tab: den redundanten "Pflanzenfamilien"-Unterreiter (read-only

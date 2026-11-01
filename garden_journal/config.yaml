@@ -1,6 +1,6 @@
 name: "Garden Journal"
 description: "Self-hosted garden journal - track beds, plantings, harvests, perennials, planning and costs"
-version: "0.4.20"
+version: "0.5.0"
 slug: "garden_journal"
 init: false
 arch:
@@ -11,5 +11,11 @@ ingress: true
 ingress_port: 3002
 panel_icon: mdi:sprout
 webui: "http://[HOST]:[PORT:3002]/"
-options: {}
-schema: {}
+ports:
+  "3002/tcp": null
+ports_description:
+  "3002/tcp": "Optional: direkter API-Zugriff fuer externe Integrationen (z.B. Jarvis) ueber den X-API-Token-Header auf /garten/api/integration/*, siehe README. Fuer die normale Weboberflaeche NICHT noetig, die laeuft ueber Ingress. Standardmaessig deaktiviert -- nur aktivieren, wenn ein externer Dienst direkt zugreifen muss."
+options:
+  api_token: ""
+schema:
+  api_token: "str?"
