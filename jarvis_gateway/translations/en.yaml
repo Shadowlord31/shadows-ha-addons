@@ -1,0 +1,6 @@
+name: Jarvis Gateway
+description: Gateway between Jarvis and Home Assistant - only explicitly exposed entities
+configuration:
+  api_token:
+    name: API token
+    description: Token Jarvis sends in the X-API-Token header. Empty = access via the port is blocked (403).

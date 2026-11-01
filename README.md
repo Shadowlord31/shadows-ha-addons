@@ -24,6 +24,11 @@ Cosori Dual Blaze TwinFry (CAF-TF101S) via VeSync cloud and MQTT discovery: per 
 temperature and time, send/end buttons, status and remaining time. The cook start stays on
 the device (EU safety rule).
 
+### [Jarvis Gateway](./jarvis_gateway)
+Gateway between the voice assistant Jarvis and Home Assistant: Jarvis gets only an add-on token and
+sees/controls only explicitly exposed entities (per-entity actions, value limits, roles, quiet hours,
+audit log, Assist import). Token API on port 3003, UI via Ingress.
+
 ## Installation
 
 1. In Home Assistant, go to **Settings > Add-ons > Add-on Store**

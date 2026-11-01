@@ -1,0 +1,6 @@
+name: Jarvis Gateway
+description: Schleuse zwischen Jarvis und Home Assistant - nur explizit freigegebene Entitaeten
+configuration:
+  api_token:
+    name: API-Token
+    description: Token, das Jarvis im Header X-API-Token sendet. Leer = Zugriff ueber den Port ist gesperrt (403).
