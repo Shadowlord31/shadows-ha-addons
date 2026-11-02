@@ -43,7 +43,7 @@ function createApp({ dataDir, ha, ingressIps, getOptions, rateLimit = 120, now =
   app.use(createAccessGate({ ingressIps, getOptions }));
   app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
-  app.use('/api/v1', express.json({ limit: '16kb' }), require('./routes/v1')({ gateway, ha }));
+  app.use('/api/v1', express.json({ limit: '16kb' }), require('./routes/v1')({ gateway, ha, store, audit, now }));
   app.use('/api/ui', express.json({ limit: '2mb' }), require('./routes/ui')({ gateway, ha, store, audit }));
   app.use(express.static(path.join(__dirname, 'public')));
 

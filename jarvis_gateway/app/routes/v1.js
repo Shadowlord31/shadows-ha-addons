@@ -1,5 +1,6 @@
 const express = require('express');
 const { ApiError } = require('../lib/gateway');
+const { History } = require('../lib/history');
 
 function wrap(fn) {
   return async (req, res, next) => {
@@ -7,8 +8,9 @@ function wrap(fn) {
   };
 }
 
-module.exports = function v1({ gateway, ha }) {
+module.exports = function v1({ gateway, ha, store, audit, now }) {
   const r = express.Router();
+  const history = new History({ ha, store, gateway, audit, now });
 
   r.get('/health', wrap(() => ({
     ok: ha.connected,
@@ -30,6 +32,8 @@ module.exports = function v1({ gateway, ha }) {
     const looksLikeId = /^[a-z0-9_]+\.[a-z0-9_]+$/.test(ref);
     return gateway.getOne(looksLikeId ? { entity_id: ref } : { name: ref, room });
   }));
+
+  r.get('/history', wrap((req) => history.get(req.query)));
 
   r.post('/call', wrap((req) => gateway.call(req.body)));
 

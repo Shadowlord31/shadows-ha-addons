@@ -22,6 +22,8 @@ class MockHa {
     this.restRequests = 0;
     this.failServices = null; // HTTP-Status, mit dem Service-Calls scheitern
     this.serviceDelayMs = 0;
+    this.history = {}; // entity_id -> [{state, last_changed}]
+    this.historyRequests = [];
     this.paused = false;
     this.sockets = new Set();
     this.subs = new Map(); // socket -> Set(event types)
@@ -158,6 +160,15 @@ class MockHa {
     req.on('end', async () => {
       const url = req.url.replace(/^\/core\/api/, '');
       const json = (code, obj) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(obj)); };
+      let hm;
+      if (req.method === 'GET' && (hm = url.match(/^\/history\/period\/([^?]+)\?(.*)$/))) {
+        const q = new URLSearchParams(hm[2]);
+        this.historyRequests.push({ start: decodeURIComponent(hm[1]), query: Object.fromEntries(q), raw: hm[2] });
+        const id = q.get('filter_entity_id');
+        const from = Date.parse(decodeURIComponent(hm[1])), to = Date.parse(q.get('end_time'));
+        const rows = (this.history[id] || []).filter((r) => { const t = Date.parse(r.last_changed); return t >= from && t < to; });
+        return json(200, rows.length ? [rows.map((r, i) => (i === 0 ? { entity_id: id, ...r } : r))] : []);
+      }
       if (req.method === 'GET' && url === '/states') return json(200, [...this.states.values()]);
       let m;
       if (req.method === 'GET' && (m = url.match(/^\/states\/(.+)$/))) {

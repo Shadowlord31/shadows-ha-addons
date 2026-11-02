@@ -36,6 +36,7 @@ Standard beim Anlegen: `sensor`, `binary_sensor`, `weather` nur lesen; steuerbar
 | GET | `/areas` | Raeume |
 | GET | `/entities?area=&domain=&q=` | freigegebene Entitaeten |
 | GET | `/entities/{id oder Name}` | eine Entitaet |
+| GET | `/history?entity_id=&start=&end=&interval=raw\|hour\|day` | Verlauf einer freigegebenen Entitaet (lesen oder steuern) |
 | POST | `/call` | `{entity_id oder name, action, params, role, person}` |
 
 Pruefreihenfolge bei `/call`: freigegeben (`not_exposed`) → Steuerzugriff (`read_only`) → Aktion erlaubt (`action_not_allowed`) →
@@ -49,6 +50,20 @@ curl -H "X-API-Token: $T" $B/health
 curl -H "X-API-Token: $T" "$B/entities?area=Küche&domain=light"
 curl -H "X-API-Token: $T" -H 'Content-Type: application/json' \
   -d '{"name":"Küche Licht","action":"turn_on","params":{"brightness_pct":40},"role":"erwachsen","person":"Thomas"}' $B/call
+```
+
+### Verlauf (`/history`)
+
+- `start`/`end`: ISO-8601, Standard letzte 24 h, maximal 31 Tage (sonst 400 `range_too_large`). Ohne Zeitzonenangabe gilt Europe/Berlin; ein `+` im Offset in der URL als `%2B` schreiben.
+- `interval=raw`: `{t, state}`, hoechstens 5000 Punkte (sonst 413 `too_many_points`, dann `hour`/`day` nehmen).
+- `interval=hour|day`: nur numerisch; je Fenster `{t, min, max, mean, first, last, count}`. `mean` ist der Mittelwert der aufgezeichneten Zustandswerte (nicht zeitgewichtet). Tagesfenster in Europe/Berlin (23/25-Stunden-Tage bei Zeitumstellung korrekt), `t` = Fensterbeginn mit Offset. `unavailable`/`unknown` werden ignoriert, Fenster ohne Werte fehlen; andere Texte ergeben 400 `not_numeric`.
+- Der Kopf enthaelt `unit_of_measurement`, falls dieses Attribut fuer die Entitaet freigegeben ist. Es werden nie Attribute ausgegeben.
+
+```bash
+# Regen je Tag der letzten 7 Tage
+curl -H "X-API-Token: $T" "$B/history?entity_id=sensor.regen_heute&interval=day&start=2026-10-26&end=2026-11-02"
+# Temperaturverlauf stuendlich, gestern
+curl -H "X-API-Token: $T" "$B/history?entity_id=sensor.aussentemperatur&interval=hour&start=2026-11-01&end=2026-11-02"
 ```
 
 ## Daten
