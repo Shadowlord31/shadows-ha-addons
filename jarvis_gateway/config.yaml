@@ -1,6 +1,6 @@
 name: "Jarvis Gateway"
 description: "Schleuse zwischen dem Sprachassistenten Jarvis und Home Assistant - nur explizit freigegebene Entitaeten, pro Entitaet konfigurierbar"
-version: "0.4.0"
+version: "0.4.1"
 slug: "jarvis_gateway"
 init: false
 arch:

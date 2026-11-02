@@ -544,3 +544,11 @@ test('call_many: Zusatzfelder (service, target) werden ignoriert, nie durchgerei
   const u = await many({ entity_ids: ['select.waschmodus'], action: 'select_option', params: { option: 'Eco', x: 1 } });
   assert.equal(u.json.results[0].code, 'unknown_param');
 });
+
+test('Oberflaeche: Skript ist syntaktisch gueltig, Zaehler fuer Hinweis (300) und Optionen (80) vorhanden', () => {
+  const html = require('fs').readFileSync(require('path').join(__dirname, '../public/index.html'), 'utf8');
+  const js = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  assert.doesNotThrow(() => new Function(js));
+  assert.ok(js.includes('counter(hint, 300)') && js.includes('counter(t, 80)'));
+  assert.ok(!js.includes('null' + 'null'));
+});

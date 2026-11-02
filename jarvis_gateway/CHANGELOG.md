@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Oberflaeche: Live-Zaehler (z. B. „0/300“) unter dem Feld „Hinweis fuer Jarvis“ und neben jeder Optionserklaerung (Limit 80); bei Ueberschreitung rot. Das Eingabelimit des Browsers entfaellt, damit die Ueberschreitung sichtbar wird; der Server lehnt zu lange Texte weiterhin ab
+
 ## 0.4.0
 
 - Neue Domains: `select`, `number`, `remote`, `input_button`, `humidifier`, `siren` (Mindestrolle `erwachsen`), `input_datetime` (`set_datetime` mit Uhrzeit HH:MM, auf Zeitraum begrenzbar)
