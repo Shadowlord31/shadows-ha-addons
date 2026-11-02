@@ -80,6 +80,35 @@ class MockHa {
     return this;
   }
 
+  // Zusaetzliche Entitaeten fuer die Tests der Geraetetypen (seed() bleibt unveraendert)
+  seedExtra() {
+    const S = (id, s, a) => this.states.set(id, st(id, s, a));
+    S('select.waschmodus', 'Eco', { friendly_name: 'Waschmodus', options: ['Eco', 'Intensiv', 'Schnell'] });
+    S('number.heizkurve', '5', { friendly_name: 'Heizkurve', min: 0, max: 20, step: 1, unit_of_measurement: 'K' });
+    S('remote.harmony', 'off', { friendly_name: 'Harmony', current_activity: 'PowerOff', activity_list: ['Fernsehen', 'Musik'] });
+    S('input_button.klingel', 'unknown', { friendly_name: 'Klingel' });
+    S('humidifier.bad', 'off', { friendly_name: 'Luftbefeuchter', humidity: 40, current_humidity: 35, mode: 'normal', available_modes: ['normal', 'eco', 'boost'] });
+    S('siren.alarm', 'off', { friendly_name: 'Sirene' });
+    S('input_datetime.wecker', '07:00:00', { friendly_name: 'Wecker', has_time: true, has_date: false });
+    S('automation.licht_auto', 'on', { friendly_name: 'Lichtautomatik' });
+    S('text.notiz', 'hallo', { friendly_name: 'Notiz' });
+    S('camera.eingang', 'idle', { friendly_name: 'Eingangskamera' });
+    S('alarm_control_panel.haus', 'disarmed', { friendly_name: 'Alarmanlage' });
+    S('script.mit_feldern', 'off', { friendly_name: 'Szene mit Feldern' });
+    S('media_player.radio', 'off', { friendly_name: 'Radio', source_list: ['Küche', 'Bad'], source: 'Küche', volume_level: 0.2 });
+    S('climate.bad', 'heat', { friendly_name: 'Heizung Bad', hvac_modes: ['off', 'heat'], fan_modes: ['low', 'high'], fan_mode: 'low', min_temp: 7, max_temp: 28 });
+    S('fan.ventilator', 'off', { friendly_name: 'Ventilator', preset_modes: ['auto', 'sleep'] });
+    S('light.effektlicht', 'on', { friendly_name: 'Effektlicht', effect_list: ['rainbow', 'fire'], effect: 'fire' });
+    S('light.lampe_c', 'off', { friendly_name: 'Lampe C' });
+    S('light.lampe_d', 'off', { friendly_name: 'Lampe D' });
+    this.entityRegistry.push(
+      { entity_id: 'light.lampe_c', area_id: 'kueche' },
+      { entity_id: 'light.lampe_d', area_id: 'kueche' },
+      { entity_id: 'light.effektlicht', area_id: 'kueche' },
+    );
+    return this;
+  }
+
   setState(id, state, attrs) {
     const old = this.states.get(id);
     const ns = st(id, state, attrs ?? old?.attributes ?? {});
@@ -107,7 +136,7 @@ class MockHa {
     if (!s) return;
     const a = { ...s.attributes };
     let state = s.state;
-    if (service === 'turn_on') { state = 'on'; if (data.brightness_pct !== undefined) a.brightness = Math.round(data.brightness_pct * 2.55); }
+    if (service === 'turn_on') { state = 'on'; if (data.effect !== undefined) a.effect = data.effect; if (data.activity !== undefined) a.current_activity = data.activity; if (data.brightness_pct !== undefined) a.brightness = Math.round(data.brightness_pct * 2.55); }
     else if (service === 'turn_off') state = 'off';
     else if (service === 'toggle') state = s.state === 'on' ? 'off' : 'on';
     else if (service === 'set_temperature') a.temperature = data.temperature;
@@ -119,6 +148,14 @@ class MockHa {
     else if (service === 'volume_set') a.volume_level = data.volume_level;
     else if (service === 'select_option') state = data.option;
     else if (service === 'set_value') state = String(data.value);
+    else if (service === 'select_source') a.source = data.source;
+    else if (service === 'set_fan_mode') a.fan_mode = data.fan_mode;
+    else if (service === 'set_preset_mode') a.preset_mode = data.preset_mode;
+    else if (service === 'set_humidity') a.humidity = data.humidity;
+    else if (service === 'set_mode') a.mode = data.mode;
+    else if (service === 'set_datetime') state = data.time;
+    else if (service === 'volume_up') a.volume_level = Math.min(1, Math.round(((a.volume_level ?? 0) + 0.1) * 100) / 100);
+    else if (service === 'volume_down') a.volume_level = Math.max(0, Math.round(((a.volume_level ?? 0) - 0.1) * 100) / 100);
     this.setState(id, state, a);
   }
 

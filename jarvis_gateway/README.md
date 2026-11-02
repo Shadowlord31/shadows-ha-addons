@@ -41,6 +41,52 @@ HTML-Tags und Steuerzeichen werden entfernt, zu lange Texte abgelehnt (400). `/c
   {"allowed":["Google","Musik","Aus"],"option_hints":{"Google":"Fernsehen, Streaming, Netflix, YouTube","Musik":"Radio im Wohnzimmer","Aus":"alles aus"}}}}}}
 ```
 
+### Geraetetypen und Aktionen
+
+Jede Aktion ist fest einem Home-Assistant-Service zugeordnet, Parameter stehen auf einer Positivliste; freie Services oder Texte werden nie durchgereicht.
+
+| Domain | Aktionen (Parameter) |
+|---|---|
+| light | turn_on (brightness_pct, color_temp_kelvin, rgb_color, effect), turn_off, toggle |
+| switch, input_boolean | turn_on, turn_off, toggle |
+| climate | turn_on, turn_off, set_temperature, set_hvac_mode, set_preset_mode, set_fan_mode |
+| cover | open, close, stop, set_cover_position |
+| media_player | turn_on, turn_off, play, pause, next, previous, volume_set, volume_mute, volume_up, volume_down, select_source (source) |
+| fan | turn_on, turn_off, set_percentage, set_preset_mode |
+| vacuum | start, pause, return_to_base, stop, locate |
+| lock | lock, unlock |
+| script | turn_on (konfigurierte Felder → `variables`) |
+| scene, button, input_button | turn_on / press |
+| automation | trigger, turn_on, turn_off (Standard ab Rolle `erwachsen`) |
+| input_number, number | set_value (value) |
+| input_select, select | select_option (option) |
+| remote | turn_on (optional activity), turn_off |
+| humidifier | turn_on, turn_off, set_humidity (0-100), set_mode (mode) |
+| siren | turn_on, turn_off (Standard ab Rolle `erwachsen`) |
+| input_datetime | set_datetime (time, HH:MM, auf Zeitraum begrenzbar) |
+
+Auswahlwerte (Quelle, Modus, Effekt, Aktivitaet ...) stammen aus den Attributen der Entitaet und lassen sich je Entitaet einschraenken. Alle anderen Domains
+(text, notify, camera, alarm_control_panel ...) sind **nur lesbar**; die Oberflaeche kennzeichnet das, "steuern" wird dort zu "lesen".
+Bestehende Konfigurationen werden nie veraendert: neue Aktionen sind dort zunaechst aus, neue lesbare Attribute bestehender Domains standardmaessig abgewaehlt.
+
+### Skript-Felder
+
+Im Editor eines Skripts lassen sich Felder anlegen (Name `a-z0-9_`, Typ Auswahl mit erlaubten Werten / Zahl mit min und max / Ja-Nein, optional Pflicht, max. 20).
+`turn_on` reicht genau diese Felder als `variables` weiter; Typ und Grenzen werden wie bei anderen Parametern geprueft (`invalid_param`, `value_out_of_range`, `missing_param`), unbekannte Felder abgelehnt (`unknown_param`).
+Die Felder erscheinen in `/entities` unter `actions.turn_on.params`.
+
+### Sammelaufruf (`/call_many`)
+
+`{entity_ids (max. 30) ODER area + domain, action, params, role, person}`. Jede Entitaet wird einzeln wie `/call` geprueft (Freigabe, Aktion, Parameter, Grenzen, Rolle, Ruhezeit),
+mit einem eigenen Servicecall ausgefuehrt und einzeln protokolliert. Antwort immer 200 mit
+`{"results":[{"entity_id":"...","ok":true,"state_after":{...}},{"entity_id":"...","ok":false,"error":"...","code":"read_only"}]}`; ein Fehler stoppt die anderen nicht.
+Fehler der ganzen Anfrage: 400 `invalid_request` / `too_many_entities`, 404 `not_found` (Bereich ohne Treffer). Bei Bereich + Domain werden nur freigegebene Entitaeten beruecksichtigt.
+
+```bash
+curl -H "X-API-Token: $T" -H 'Content-Type: application/json' \
+  -d '{"area":"Küche","domain":"light","action":"turn_off","role":"erwachsen","person":"Thomas"}' $B/call_many
+```
+
 ## API `/api/v1` (Header `X-API-Token`)
 
 | Methode | Pfad | Zweck |
@@ -51,6 +97,7 @@ HTML-Tags und Steuerzeichen werden entfernt, zu lange Texte abgelehnt (400). `/c
 | GET | `/entities/{id oder Name}` | eine Entitaet |
 | GET | `/history?entity_id=&start=&end=&interval=raw\|hour\|day` | Verlauf einer freigegebenen Entitaet (lesen oder steuern) |
 | POST | `/call` | `{entity_id oder name, action, params, role, person}` |
+| POST | `/call_many` | `{entity_ids (max. 30) oder area + domain, action, params, role, person}` → `{results:[...]}` |
 
 Pruefreihenfolge bei `/call`: freigegeben (`not_exposed`) → Steuerzugriff (`read_only`) → Aktion erlaubt (`action_not_allowed`) →
 Parameter bekannt (`unknown_param`) → Typ und Grenzen (`value_out_of_range`, kein stilles Klemmen) → Rolle (`role_too_low`) →

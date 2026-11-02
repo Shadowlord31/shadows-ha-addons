@@ -19,9 +19,10 @@ async function waitFor(fn, ms = 4000) {
 }
 
 // Startet Mock-HA + Gateway auf 127.0.0.1. ingress=true: 127.0.0.1 gilt als Supervisor-Gateway.
-async function startGateway({ ingress = false, apiToken = API_TOKEN, rateLimit = 1000, now, seed = true, configure = true, dataDir } = {}) {
+async function startGateway({ ingress = false, apiToken = API_TOKEN, rateLimit = 1000, now, seed = true, extra = false, configure = true, dataDir } = {}) {
   const mock = new MockHa();
   if (seed) mock.seed();
+  if (extra) mock.seedExtra();
   await mock.start();
   const dir = dataDir || fs.mkdtempSync(path.join(os.tmpdir(), 'jgw-'));
   const optionsPath = path.join(dir, 'options.json');

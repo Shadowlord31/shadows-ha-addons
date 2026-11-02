@@ -231,6 +231,7 @@ function renderList() {
         h('div', { class: 'nm' }, e.name || e.ha_name || e.entity_id),
         h('div', { class: 'id' }, e.entity_id + (e.area ? ' · ' + e.area : ''))),
       e.assist ? h('span', { class: 'badge assist' }, 'Assist') : null,
+      e.controllable ? null : h('span', { class: 'badge', title: 'Dieser Gerätetyp kann nicht gesteuert werden' }, 'nur Lesen'),
       h('span', { class: 'badge ' + (e.configured ? e.access : '') }, e.configured ? ACCESS[e.access] : 'nicht freigegeben')));
   }
   $('more').classList.toggle('hidden', visible.length <= shown);
@@ -248,7 +249,7 @@ $('bulkClear').onclick = () => { selected.clear(); $('selAll').checked = false; 
 $('bulkApply').onclick = async () => {
   try {
     const r = await api('POST', '/bulk', { entity_ids: [...selected], access: $('bulkAccess').value });
-    banner(r.changed + ' Entitäten geändert' + (r.skipped.length ? ', ' + r.skipped.length + ' übersprungen' : ''), 'ok');
+    banner(r.changed + ' Entitäten geändert' + (r.skipped.length ? ', ' + r.skipped.length + ' übersprungen' : '') + (r.downgraded ? ', ' + r.downgraded + ' davon nur lesbar (Gerätetyp nicht steuerbar)' : ''), 'ok');
     selected.clear(); $('selAll').checked = false;
     await loadState();
   } catch (e) { banner(e.message); }
@@ -267,6 +268,7 @@ async function openEdit(id) {
   const m = $('modal');
 
   const access = h('select', {}, ...Object.entries(ACCESS).map(([v, l]) => h('option', { value: v }, l)));
+  if (!Object.keys(tpl).length) access.querySelector('option[value=control]').remove();
   if (!d.configured) cfg.access = 'off';
   access.value = cfg.access;
   const name = h('input', { value: cfg.name || '', placeholder: d.ha_name || '' });
@@ -299,6 +301,11 @@ async function openEdit(id) {
         const hi = h('input', { type: 'number', step: ps.type === 'int' ? 1 : 'any', min: ps.min, max: ps.max, value: lim ? lim.max : ps.max });
         limEls[pn] = { kind: 'range', lo, hi, step: ps.type };
         lims.append(h('div', { class: 'lim' }, h('span', {}, (ps.label || pn) + ' von'), lo, h('span', {}, 'bis'), hi, h('span', { class: 'muted' }, ps.unit || '')));
+      } else if (ps.type === 'time') {
+        const from = h('input', { type: 'time', value: lim ? lim.from : '00:00' });
+        const to = h('input', { type: 'time', value: lim ? lim.to : '23:59' });
+        limEls[pn] = { kind: 'time', from, to };
+        lims.append(h('div', { class: 'lim' }, h('span', {}, (ps.label || pn) + ' von'), from, h('span', {}, 'bis'), to));
       } else if (ps.type === 'choice') {
         const all = [...new Set([...(d.defaults.actions[an]?.limits[pn]?.allowed || []), ...(lim?.allowed || [])])];
         const set = new Set(lim ? lim.allowed : all);
@@ -317,6 +324,36 @@ async function openEdit(id) {
     actBox.append(box);
   }
 
+  const fieldRows = [];
+  const fieldBox = h('div');
+  function addFieldRow(f) {
+    const nm = h('input', { value: f.name || '', placeholder: 'Feldname (a-z, 0-9, _)', maxlength: 40 });
+    const ty = h('select', {}, h('option', { value: 'choice' }, 'Auswahl'), h('option', { value: 'number' }, 'Zahl'), h('option', { value: 'bool' }, 'Ja/Nein'));
+    ty.value = f.type || 'choice';
+    const rq = h('input', { type: 'checkbox' }); rq.checked = !!f.required;
+    const al = h('input', { value: (f.allowed || []).join(', '), placeholder: 'erlaubte Werte, Komma-getrennt' });
+    const lo = h('input', { type: 'number', step: 'any', value: f.min ?? 0 });
+    const hi = h('input', { type: 'number', step: 'any', value: f.max ?? 100 });
+    const choiceBox = h('div', {}, al);
+    const numBox = h('div', { class: 'row' }, h('span', {}, 'von'), lo, h('span', {}, 'bis'), hi);
+    const row = h('div', { class: 'lim', style: 'display:block' });
+    const sync = () => { choiceBox.classList.toggle('hidden', ty.value !== 'choice'); numBox.classList.toggle('hidden', ty.value !== 'number'); };
+    ty.onchange = sync;
+    const entry = { nm, ty, rq, al, lo, hi, row };
+    fieldRows.push(entry);
+    row.append(h('div', { class: 'row' }, nm, ty, h('label', { class: 'chk fit' }, rq, 'Pflicht'),
+      h('button', { class: 'btn danger', type: 'button', onclick: () => { fieldRows.splice(fieldRows.indexOf(entry), 1); row.remove(); } }, 'Entfernen')), choiceBox, numBox);
+    sync();
+    fieldBox.append(row);
+  }
+  for (const f of cfg.fields || []) addFieldRow(f);
+  const collectFields = () => fieldRows.map((r) => {
+    const f = { name: r.nm.value.trim(), type: r.ty.value, required: r.rq.checked };
+    if (f.type === 'choice') f.allowed = r.al.value.split(',').map((x) => x.trim()).filter(Boolean);
+    if (f.type === 'number') { f.min = Number(r.lo.value); f.max = Number(r.hi.value); }
+    return f;
+  });
+
   const attrEls = attrList.map((a) => { const c = h('input', { type: 'checkbox' }); c.checked = (cfg.attributes || []).includes(a); return [a, c]; });
 
   function collect() {
@@ -326,6 +363,7 @@ async function openEdit(id) {
       const optionHints = {};
       for (const [pn, le] of Object.entries(el.limEls)) {
         if (le.kind === 'range') limits[pn] = { min: Number(le.lo.value), max: Number(le.hi.value) };
+        else if (le.kind === 'time') limits[pn] = { from: le.from.value, to: le.to.value };
         else {
           limits[pn] = { allowed: le.cbs.filter(([, c]) => c.checked).map(([v]) => v) };
           const oh = {};
@@ -336,6 +374,7 @@ async function openEdit(id) {
       actions[an] = { enabled: el.en.checked, min_role: el.role.value, limits, option_hints: optionHints };
     }
     return {
+      ...(d.domain === 'script' ? { fields: collectFields() } : {}),
       access: access.value,
       name: name.value.trim() || null,
       hint: hint.value.trim() || null,
@@ -361,6 +400,9 @@ async function openEdit(id) {
       h('div', {}, h('label', {}, 'Raum'), room)),
     h('label', {}, 'Aliase'), aliases,
     h('label', {}, 'Hinweis für Jarvis (max. 300 Zeichen, reiner Text)'), hint,
+    isCtl ? null : h('div', { class: 'banner warn', style: 'margin-top:10px' }, 'Nur Lesen: Dieser Gerätetyp (' + d.domain + ') kann über das Gateway nicht gesteuert werden. Jarvis sieht höchstens Zustand und Name.'),
+    d.domain === 'script' ? h('div', {}, h('label', {}, 'Felder des Skripts (werden als Variablen übergeben)'), fieldBox,
+      h('button', { class: 'btn sec', type: 'button', style: 'margin-top:6px', onclick: () => addFieldRow({}) }, 'Feld hinzufügen')) : null,
     isCtl ? h('div', {}, h('label', {}, 'Erlaubte Aktionen und Grenzen'), actBox,
       h('div', { class: 'row' },
         h('div', {}, h('label', {}, 'Bestätigung'), confirm),
@@ -401,6 +443,7 @@ $('btnAssist').onclick = async () => {
     h('div', {}, ...picks.map(([i, c]) => h('div', { class: 'item' }, c,
       h('div', { class: 'main' }, h('div', { class: 'nm' }, i.name), h('div', { class: 'id' }, i.entity_id + (i.area ? ' · ' + i.area : ''))),
       h('span', { class: 'badge ' + i.proposed.access }, ACCESS[i.proposed.access]),
+      i.controllable ? null : h('span', { class: 'badge' }, 'nur Lesen'),
       i.proposed.confirm ? h('span', { class: 'badge' }, 'Bestätigung ' + i.proposed.confirm) : null,
       i.proposed.min_role !== 'all' ? h('span', { class: 'badge' }, 'ab ' + i.proposed.min_role) : null))),
     h('div', { class: 'foot' },

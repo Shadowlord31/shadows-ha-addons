@@ -2,7 +2,7 @@ const D = require('./domains');
 
 class ValidationError extends Error {}
 
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const TIME_RE = D.TIME_RE;
 
 function clean(s, max) {
   return String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -32,6 +32,7 @@ function defaultLimits(spec, attrs) {
     max = Math.max(spec.min, Math.min(max, spec.max));
     return { min, max };
   }
+  if (spec.type === 'time') return { from: '00:00', to: '23:59' };
   if (spec.type === 'choice') {
     if (spec.values) {
       const fromAttr = Array.isArray(attrs?.[spec.attr]) ? attrs[spec.attr].filter((x) => spec.values.includes(x)) : null;
@@ -62,11 +63,12 @@ function defaultConfig(entityId, attrs) {
     hint: null,
     aliases: [],
     room: null,
+    ...(domain === 'script' ? { fields: [] } : {}),
     actions,
     confirm: domain === 'lock' ? 2 : 0,
     min_role: domain === 'lock' ? 'erwachsen' : 'all',
     quiet: null,
-    attributes: [...D.attributesFor(domain)],
+    attributes: D.attributesFor(domain).filter((a) => !(D.OPT_IN_ATTRIBUTES[domain] || []).includes(a)),
   };
 }
 
@@ -93,6 +95,14 @@ function normalizeLimits(spec, input, base, where) {
     if (min < spec.min || max > spec.max) throw new ValidationError(`${where}: erlaubt sind ${spec.min} bis ${spec.max}`);
     return { min, max };
   }
+  if (spec.type === 'time') {
+    const src = input && typeof input === 'object' ? input : {};
+    const from = src.from === undefined ? base.from : src.from;
+    const to = src.to === undefined ? base.to : src.to;
+    if (typeof from !== 'string' || typeof to !== 'string' || !TIME_RE.test(from) || !TIME_RE.test(to)) throw new ValidationError(`${where}: Uhrzeiten im Format HH:MM erwartet`);
+    if (from > to) throw new ValidationError(`${where}: "von" liegt nach "bis"`);
+    return { from, to };
+  }
   if (spec.type === 'choice') {
     const src = input && Array.isArray(input.allowed) ? input.allowed : base.allowed;
     const allowed = [];
@@ -105,6 +115,43 @@ function normalizeLimits(spec, input, base, where) {
     return { allowed };
   }
   return null;
+}
+
+// Felder eines Skripts (werden als "variables" an script.turn_on gegeben): feste Typen, Namen und Grenzen
+function normalizeFields(input, entityId) {
+  if (!Array.isArray(input)) throw new ValidationError(`${entityId}: fields muss eine Liste sein`);
+  if (input.length > D.MAX_SCRIPT_FIELDS) throw new ValidationError(`${entityId}: höchstens ${D.MAX_SCRIPT_FIELDS} Felder erlaubt`);
+  const out = [];
+  const seen = new Set();
+  for (const f of input) {
+    if (!f || typeof f !== 'object' || Array.isArray(f)) throw new ValidationError(`${entityId}: Feld muss ein Objekt sein`);
+    const name = f.name;
+    if (typeof name !== 'string' || !D.FIELD_NAME_RE.test(name)) throw new ValidationError(`${entityId}: Feldname muss mit einem Kleinbuchstaben beginnen und darf nur a-z, 0-9 und _ enthalten (höchstens 40 Zeichen)`);
+    if (seen.has(name)) throw new ValidationError(`${entityId}: Feld „${name}“ ist doppelt`);
+    seen.add(name);
+    const where = `${entityId}.${name}`;
+    const entry = { name, type: f.type, required: f.required === true };
+    if (f.required !== undefined && typeof f.required !== 'boolean') throw new ValidationError(`${where}: required muss true oder false sein`);
+    if (f.type === 'number') {
+      const min = num(f.min, `${where} min`);
+      const max = num(f.max, `${where} max`);
+      if (min > max) throw new ValidationError(`${where}: Minimum ist größer als Maximum`);
+      if (Math.abs(min) > 1e9 || Math.abs(max) > 1e9) throw new ValidationError(`${where}: erlaubt sind -1000000000 bis 1000000000`);
+      Object.assign(entry, { min, max });
+    } else if (f.type === 'choice') {
+      if (!Array.isArray(f.allowed) || f.allowed.length === 0 || f.allowed.length > 100) throw new ValidationError(`${where}: allowed braucht 1 bis 100 Werte`);
+      const allowed = [];
+      for (const v of f.allowed) {
+        if (typeof v !== 'string' || !v || v.length > 100) throw new ValidationError(`${where}: ungültiger Wert`);
+        if (!allowed.includes(v)) allowed.push(v);
+      }
+      entry.allowed = allowed;
+    } else if (f.type !== 'bool') {
+      throw new ValidationError(`${where}: Typ muss choice, number oder bool sein`);
+    }
+    out.push(entry);
+  }
+  return out;
 }
 
 // Prueft/normalisiert eine Entitaets-Konfiguration. Unbekanntes wird verworfen, Ungueltiges abgelehnt.
@@ -133,6 +180,9 @@ function normalizeConfig(entityId, input, attrs) {
       const c = clean(a, 60);
       if (c && !seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); out.aliases.push(c); }
     }
+  }
+  if (domain === 'script') {
+    out.fields = normalizeFields(input.fields === undefined ? [] : input.fields, entityId);
   }
   if (input.hint !== undefined) {
     out.hint = input.hint === null ? null : plainText(input.hint, 300, `${entityId}: Hinweis`) || null;

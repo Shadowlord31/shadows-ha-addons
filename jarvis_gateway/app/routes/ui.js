@@ -4,7 +4,7 @@ const { normalizeConfig, defaultConfig, ValidationError } = require('../lib/conf
 const { ApiError } = require('../lib/gateway');
 
 const EXPORT_FORMAT = 'jarvis-gateway-settings';
-const CHOICE_ATTRS = ['hvac_modes', 'preset_modes', 'options', 'min_temp', 'max_temp', 'min', 'max'];
+const CHOICE_ATTRS = ['hvac_modes', 'preset_modes', 'options', 'min_temp', 'max_temp', 'min', 'max', 'fan_modes', 'source_list', 'effect_list', 'activity_list', 'available_modes'];
 
 function wrap(fn) {
   return async (req, res, next) => {
@@ -104,15 +104,17 @@ module.exports = function ui({ gateway, ha, store, audit }) {
     if (!['off', 'read', 'control'].includes(access)) throw new ApiError(400, 'validation', 'access muss off, read oder control sein');
     const skipped = [];
     let changed = 0;
+    let downgraded = 0;
     store.update((ents) => {
       for (const id of ids) {
         if (typeof id !== 'string' || !D.ENTITY_ID_RE.test(id) || (!ha.states.has(id) && !Object.hasOwn(ents, id))) { skipped.push(String(id).slice(0, 80)); continue; }
         const base = Object.hasOwn(ents, id) ? ents[id] : defaultConfig(id, attrsOf(id));
         ents[id] = normalizeConfig(id, { ...base, access }, attrsOf(id));
+        if (access === 'control' && ents[id].access !== 'control') downgraded++;
         changed++;
       }
     });
-    return { ok: true, changed, skipped };
+    return { ok: true, changed, skipped, downgraded };
   }));
 
   // ---- Assist-Uebernahme ----
@@ -130,6 +132,7 @@ module.exports = function ui({ gateway, ha, store, audit }) {
         name: ha.haName(id),
         area: ha.areaOf(id),
         domain: D.domainOf(id),
+        controllable: D.isControllable(D.domainOf(id)),
         proposed: { access: p.access, confirm: p.confirm, min_role: p.min_role, actions: Object.keys(p.actions) },
       });
     }

@@ -37,6 +37,8 @@ module.exports = function v1({ gateway, ha, store, audit, now }) {
 
   r.post('/call', wrap((req) => gateway.call(req.body)));
 
+  r.post('/call_many', wrap((req) => gateway.callMany(req.body)));
+
   r.use((req, res, next) => next(new ApiError(404, 'not_found', 'Unbekannter Endpunkt')));
   return r;
 };

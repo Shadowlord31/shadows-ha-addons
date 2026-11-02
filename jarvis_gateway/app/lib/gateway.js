@@ -62,22 +62,39 @@ class Gateway {
     return attrs;
   }
 
+  // Parameter einer Aktion; bei Skripten aus den konfigurierten Feldern (Typen/Grenzen fest, nie freie Daten)
+  effectiveAction(tmpl, cfg, actCfg) {
+    if (tmpl.dynamic !== 'script_fields') return { tmpl, actCfg };
+    const params = {};
+    const limits = {};
+    for (const f of cfg.fields || []) {
+      if (f.type === 'number') params[f.name] = { type: 'number', min: f.min, max: f.max, required: !!f.required, label: f.name };
+      else if (f.type === 'choice') { params[f.name] = { type: 'choice', required: !!f.required, label: f.name }; limits[f.name] = { allowed: f.allowed }; }
+      else if (f.type === 'bool') params[f.name] = { type: 'bool', required: !!f.required, label: f.name };
+    }
+    return { tmpl: { ...tmpl, params }, actCfg: { ...actCfg, limits } };
+  }
+
   actionsView(id, cfg, state) {
     const domain = D.domainOf(id);
     const out = {};
     if (cfg.access !== 'control') return out;
     for (const [name, tmpl] of Object.entries(D.actionsFor(domain))) {
-      const a = cfg.actions?.[name];
-      if (!a || !a.enabled) continue;
+      const a0 = cfg.actions?.[name];
+      if (!a0 || !a0.enabled) continue;
+      const eff = this.effectiveAction(tmpl, cfg, a0);
+      const a = eff.actCfg;
       const params = {};
-      for (const [pn, spec] of Object.entries(tmpl.params)) {
+      for (const [pn, spec] of Object.entries(eff.tmpl.params)) {
         const p = { type: spec.type, required: !!spec.required };
         if (spec.type === 'int' || spec.type === 'number') Object.assign(p, a.limits?.[pn] || { min: spec.min, max: spec.max });
         else if (spec.type === 'choice') {
           p.allowed = this.allowedChoices(spec, a.limits?.[pn], state);
+          if (!spec.required && !p.allowed.length) continue;
           const oh = a.option_hints?.[pn] || {};
           p.option_hints = Object.fromEntries(p.allowed.filter((o) => Object.hasOwn(oh, o)).map((o) => [o, oh[o]]));
         }
+        else if (spec.type === 'time') Object.assign(p, a.limits?.[pn] || { from: '00:00', to: '23:59' });
         else if (spec.type === 'rgb') p.range = [0, 255];
         params[pn] = p;
       }
@@ -201,6 +218,10 @@ class Gateway {
         if (spec.type === 'int' && !Number.isInteger(given)) throw bad('ganze Zahl erwartet');
         const lim = actCfg.limits?.[pn] || { min: spec.min, max: spec.max };
         if (given < lim.min || given > lim.max) throw new ApiError(400, 'value_out_of_range', `Parameter „${pn}“: ${given} liegt außerhalb des erlaubten Bereichs ${lim.min} bis ${lim.max}`, { min: lim.min, max: lim.max });
+      } else if (spec.type === 'time') {
+        if (typeof given !== 'string' || !D.TIME_RE.test(given)) throw bad('Uhrzeit im Format HH:MM erwartet');
+        const lim = actCfg.limits?.[pn] || { from: '00:00', to: '23:59' };
+        if (given < lim.from || given > lim.to) throw new ApiError(400, 'value_out_of_range', `Parameter „${pn}“: ${given} liegt außerhalb des erlaubten Zeitraums ${lim.from} bis ${lim.to}`, { from: lim.from, to: lim.to });
       } else if (spec.type === 'bool') {
         if (typeof given !== 'boolean') throw bad('true oder false erwartet');
       } else if (spec.type === 'rgb') {
@@ -216,6 +237,7 @@ class Gateway {
     for (const group of tmpl.exclusive || []) {
       if (group.filter((k) => Object.hasOwn(params, k)).length > 1) throw new ApiError(400, 'invalid_param', `Parameter ${group.join(' und ')} können nicht zusammen verwendet werden`);
     }
+    if (tmpl.wrap) return Object.keys(data).length ? { [tmpl.wrap]: data } : {};
     return data;
   }
 
@@ -262,8 +284,7 @@ class Gateway {
     // 3. Aktion erlaubt?
     const tmpls = D.actionsFor(D.domainOf(id));
     if (!Object.hasOwn(tmpls, b.action) || !cfg.actions?.[b.action]?.enabled) throw new ApiError(403, 'action_not_allowed', `Die Aktion „${b.action.slice(0, 40)}“ ist für diese Entität nicht erlaubt`);
-    const tmpl = tmpls[b.action];
-    const actCfg = cfg.actions[b.action];
+    const { tmpl, actCfg } = this.effectiveAction(tmpls[b.action], cfg, cfg.actions[b.action]);
     // 4. Parameter, Typen, Grenzen
     const data = this.validateParams(id, b.action, tmpl, actCfg, params, state);
     // 5. Rolle
@@ -289,6 +310,46 @@ class Gateway {
       const after = st ? { state: st.state, attributes: this.filteredAttributes(id, cfg, st) } : null;
       return { ok: true, entity_id: id, action: b.action, state_after: after };
     });
+  }
+
+  // Sammelaufruf: jede Entitaet wird einzeln wie /call geprueft, ausgefuehrt und protokolliert
+  async callMany(body) {
+    const b = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+    const bad = (m) => new ApiError(400, 'invalid_request', m);
+    if (typeof b.action !== 'string' || !b.action) throw bad('action ist erforderlich');
+    if (b.params !== undefined && (b.params === null || typeof b.params !== 'object' || Array.isArray(b.params))) throw bad('params muss ein Objekt sein');
+    const role = typeof b.role === 'string' ? b.role : 'unbekannt';
+    if (!Object.hasOwn(D.ROLE_RANK, role)) throw bad('role muss admin, erwachsen, kind oder unbekannt sein');
+    if (b.person !== undefined && b.person !== null && (typeof b.person !== 'string' || b.person.length > 80)) throw bad('person muss ein Text bis 80 Zeichen sein');
+    const byIds = b.entity_ids !== undefined;
+    const byArea = b.area !== undefined || b.domain !== undefined;
+    if (byIds === byArea) throw bad('entweder entity_ids oder area und domain angeben');
+    let ids;
+    if (byIds) {
+      if (!Array.isArray(b.entity_ids) || b.entity_ids.length === 0) throw bad('entity_ids muss eine nicht leere Liste sein');
+      if (b.entity_ids.length > D.MAX_CALL_MANY) throw new ApiError(400, 'too_many_entities', `höchstens ${D.MAX_CALL_MANY} Entitäten pro Sammelaufruf`);
+      if (!b.entity_ids.every((x) => typeof x === 'string')) throw bad('entity_ids darf nur Texte enthalten');
+      ids = [...new Set(b.entity_ids)];
+    } else {
+      if (typeof b.area !== 'string' || !b.area.trim() || typeof b.domain !== 'string' || !b.domain) throw bad('area und domain müssen Texte sein');
+      this.requireHa();
+      const af = fold(b.area);
+      ids = this.exposedIds().filter((id) => this.ha.states.has(id) && D.domainOf(id) === b.domain && fold(this.effectiveRoom(id, this.store.get(id)) || '') === af);
+      if (!ids.length) throw new ApiError(404, 'not_found', 'Keine freigegebene Entität in diesem Bereich und dieser Domain gefunden');
+      if (ids.length > D.MAX_CALL_MANY) throw new ApiError(400, 'too_many_entities', `Der Bereich enthält mehr als ${D.MAX_CALL_MANY} passende Entitäten`);
+      ids.sort();
+    }
+    const results = [];
+    for (const entity_id of ids) {
+      try {
+        const r = await this.call({ entity_id, action: b.action, params: b.params, role, person: b.person });
+        results.push({ entity_id, ok: true, state_after: r.state_after });
+      } catch (e) {
+        if (!(e instanceof ApiError)) throw e;
+        results.push({ entity_id, ok: false, error: e.message, code: e.code });
+      }
+    }
+    return { results };
   }
 
   // Aufrufe auf dieselbe Entitaet laufen nacheinander, damit state_after zum eigenen Aufruf passt
