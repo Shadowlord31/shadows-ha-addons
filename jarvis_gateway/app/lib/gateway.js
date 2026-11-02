@@ -73,7 +73,11 @@ class Gateway {
       for (const [pn, spec] of Object.entries(tmpl.params)) {
         const p = { type: spec.type, required: !!spec.required };
         if (spec.type === 'int' || spec.type === 'number') Object.assign(p, a.limits?.[pn] || { min: spec.min, max: spec.max });
-        else if (spec.type === 'choice') p.allowed = this.allowedChoices(spec, a.limits?.[pn], state);
+        else if (spec.type === 'choice') {
+          p.allowed = this.allowedChoices(spec, a.limits?.[pn], state);
+          const oh = a.option_hints?.[pn] || {};
+          p.option_hints = Object.fromEntries(p.allowed.filter((o) => Object.hasOwn(oh, o)).map((o) => [o, oh[o]]));
+        }
         else if (spec.type === 'rgb') p.range = [0, 255];
         params[pn] = p;
       }
@@ -97,6 +101,7 @@ class Gateway {
       entity_id: id,
       name: this.effectiveName(id, cfg),
       aliases: cfg.aliases || [],
+      hint: cfg.hint || null,
       area: this.effectiveRoom(id, cfg),
       domain: D.domainOf(id),
       state: state.state,

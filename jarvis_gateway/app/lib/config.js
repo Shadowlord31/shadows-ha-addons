@@ -8,6 +8,14 @@ function clean(s, max) {
   return String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+// Reiner Text: HTML-Tags und Steuerzeichen entfernen, Leerraum glaetten
+function plainText(s, max, what) {
+  if (typeof s !== 'string') throw new ValidationError(`${what}: Text erwartet`);
+  const t = s.replace(/<[^>]*>/g, ' ').replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (t.length > max) throw new ValidationError(`${what}: höchstens ${max} Zeichen erlaubt (aktuell ${t.length})`);
+  return t;
+}
+
 function num(v, what) {
   if (typeof v !== 'number' || !Number.isFinite(v)) throw new ValidationError(`${what}: Zahl erwartet`);
   return v;
@@ -51,6 +59,7 @@ function defaultConfig(entityId, attrs) {
   return {
     access: controllable && !D.READ_ONLY_DEFAULT_DOMAINS.has(domain) ? 'control' : 'read',
     name: null,
+    hint: null,
     aliases: [],
     room: null,
     actions,
@@ -59,6 +68,19 @@ function defaultConfig(entityId, attrs) {
     quiet: null,
     attributes: [...D.attributesFor(domain)],
   };
+}
+
+// Erklaerungen je Option; nur fuer erlaubte Optionen, andere werden verworfen
+function normalizeOptionHints(input, allowed, where) {
+  if (input === undefined || input === null) return null;
+  if (typeof input !== 'object' || Array.isArray(input)) throw new ValidationError(`${where}: option_hints muss ein Objekt sein`);
+  const out = {};
+  for (const opt of allowed) {
+    if (!Object.hasOwn(input, opt)) continue;
+    const t = input[opt] === null ? '' : plainText(input[opt], 80, `${where} „${opt}“`);
+    if (t) out[opt] = t;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 function normalizeLimits(spec, input, base, where) {
@@ -112,6 +134,9 @@ function normalizeConfig(entityId, input, attrs) {
       if (c && !seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); out.aliases.push(c); }
     }
   }
+  if (input.hint !== undefined) {
+    out.hint = input.hint === null ? null : plainText(input.hint, 300, `${entityId}: Hinweis`) || null;
+  }
   if (input.confirm !== undefined) {
     if (![0, 1, 2].includes(input.confirm)) throw new ValidationError(`${entityId}: Rückfrage-Stufe muss 0, 1 oder 2 sein`);
     out.confirm = input.confirm;
@@ -148,6 +173,10 @@ function normalizeConfig(entityId, input, attrs) {
       for (const [pn, spec] of Object.entries(a.params)) {
         const l = normalizeLimits(spec, given?.limits?.[pn], defA.limits[pn], `${entityId}.${name}.${pn}`);
         if (l) entry.limits[pn] = l;
+        if (spec.type === 'choice') {
+          const hints = normalizeOptionHints(given?.option_hints?.[pn], l.allowed, `${entityId}.${name}.${pn}`);
+          if (hints) (entry.option_hints ||= {})[pn] = hints;
+        }
       }
       out.actions[name] = entry;
     }

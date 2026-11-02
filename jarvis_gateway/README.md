@@ -28,6 +28,19 @@ optionale Ruhezeiten (Europe/Berlin), lesbare Attribute (feste Positivliste je D
 Standard beim Anlegen: `sensor`, `binary_sensor`, `weather` nur lesen; steuerbare Domains mit allen Vorlagen-Aktionen;
 `lock` mit Bestaetigung 2, Mindestrolle `erwachsen`.
 
+### Hinweise fuer Jarvis
+
+Pro Entitaet gibt es ein optionales Feld `hint` (Freitext, max. 300 Zeichen) und bei Aktionen mit Auswahlparameter
+(z. B. `input_select.select_option`, `climate.set_hvac_mode`) eine kurze Erklaerung je erlaubter Option (max. 80 Zeichen).
+Jarvis bekommt sie in `GET /entities` und `GET /entities/{id}` als `"hint"` (Text oder `null`) und in
+`actions.<aktion>.params.<param>.option_hints` (nur fuer aktuell erlaubte Optionen). Gespeichert und ausgeliefert wird reiner Text:
+HTML-Tags und Steuerzeichen werden entfernt, zu lange Texte abgelehnt (400). `/call` aendert sich nicht, Hinweise gelangen nie an Home Assistant.
+
+```json
+{"entity_id":"input_select.modus","hint":"Hausmodus","actions":{"select_option":{"params":{"option":
+  {"allowed":["Google","Musik","Aus"],"option_hints":{"Google":"Fernsehen, Streaming, Netflix, YouTube","Musik":"Radio im Wohnzimmer","Aus":"alles aus"}}}}}}
+```
+
 ## API `/api/v1` (Header `X-API-Token`)
 
 | Methode | Pfad | Zweck |

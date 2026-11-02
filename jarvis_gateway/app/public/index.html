@@ -270,6 +270,8 @@ async function openEdit(id) {
   if (!d.configured) cfg.access = 'off';
   access.value = cfg.access;
   const name = h('input', { value: cfg.name || '', placeholder: d.ha_name || '' });
+  const hint = h('textarea', { rows: 3, maxlength: 300, placeholder: 'Was Jarvis über dieses Gerät wissen soll, z. B. „Startet das Radio im Wohnzimmer, der Verstärker geht dabei von selbst an“' });
+  hint.value = cfg.hint || '';
   const aliases = h('input', { value: (cfg.aliases || []).join(', '), placeholder: 'Komma-getrennt' });
   const room = h('input', { value: cfg.room || '', placeholder: d.area || '' });
   const confirm = h('select', {}, h('option', { value: 0 }, '0 – direkt ausführen'), h('option', { value: 1 }, '1 – kurz bestätigen'), h('option', { value: 2 }, '2 – ausdrücklich bestätigen'));
@@ -300,9 +302,11 @@ async function openEdit(id) {
       } else if (ps.type === 'choice') {
         const all = [...new Set([...(d.defaults.actions[an]?.limits[pn]?.allowed || []), ...(lim?.allowed || [])])];
         const set = new Set(lim ? lim.allowed : all);
-        const cbs = all.map((v) => { const c = h('input', { type: 'checkbox' }); c.checked = set.has(v); return [v, c]; });
+        const oh = ac.option_hints?.[pn] || {};
+        const cbs = all.map((v) => { const c = h('input', { type: 'checkbox' }); c.checked = set.has(v); const t = h('input', { type: 'text', maxlength: 80, placeholder: 'Erklärung für Jarvis (optional)', value: oh[v] || '' }); return [v, c, t]; });
         limEls[pn] = { kind: 'choice', cbs };
-        lims.append(h('div', { class: 'lim' }, h('span', {}, (ps.label || pn) + ':'), h('div', { class: 'opts' }, ...cbs.map(([v, c]) => h('label', { class: 'chk' }, c, v)))));
+        lims.append(h('div', { class: 'lim', style: 'display:block' }, h('div', {}, (ps.label || pn) + ':'),
+          ...cbs.map(([v, c, t]) => h('div', { class: 'row', style: 'margin-top:4px' }, h('label', { class: 'chk fit', style: 'min-width:120px' }, c, v), t))));
       } else {
         lims.append(h('div', { class: 'lim muted' }, (ps.label || pn) + ' (keine Begrenzung nötig)'));
       }
@@ -319,15 +323,22 @@ async function openEdit(id) {
     const actions = {};
     for (const [an, el] of Object.entries(actionEls)) {
       const limits = {};
+      const optionHints = {};
       for (const [pn, le] of Object.entries(el.limEls)) {
         if (le.kind === 'range') limits[pn] = { min: Number(le.lo.value), max: Number(le.hi.value) };
-        else limits[pn] = { allowed: le.cbs.filter(([, c]) => c.checked).map(([v]) => v) };
+        else {
+          limits[pn] = { allowed: le.cbs.filter(([, c]) => c.checked).map(([v]) => v) };
+          const oh = {};
+          for (const [v, c, t] of le.cbs) if (c.checked && t.value.trim()) oh[v] = t.value.trim();
+          optionHints[pn] = oh;
+        }
       }
-      actions[an] = { enabled: el.en.checked, min_role: el.role.value, limits };
+      actions[an] = { enabled: el.en.checked, min_role: el.role.value, limits, option_hints: optionHints };
     }
     return {
       access: access.value,
       name: name.value.trim() || null,
+      hint: hint.value.trim() || null,
       aliases: aliases.value.split(',').map((s) => s.trim()).filter(Boolean),
       room: room.value.trim() || null,
       actions,
@@ -349,6 +360,7 @@ async function openEdit(id) {
       h('div', {}, h('label', {}, 'Sprachname'), name),
       h('div', {}, h('label', {}, 'Raum'), room)),
     h('label', {}, 'Aliase'), aliases,
+    h('label', {}, 'Hinweis für Jarvis (max. 300 Zeichen, reiner Text)'), hint,
     isCtl ? h('div', {}, h('label', {}, 'Erlaubte Aktionen und Grenzen'), actBox,
       h('div', { class: 'row' },
         h('div', {}, h('label', {}, 'Bestätigung'), confirm),
