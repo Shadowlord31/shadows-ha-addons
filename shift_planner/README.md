@@ -69,10 +69,168 @@ Für eigene Skripte/Automationen (z.B. einen Assistenten im LAN), die Schichten 
 | `PATCH /vacation/:id` | Urlaub ändern (Teil-Update): `{username, start_date?, end_date?, status?, note?}` — wechselt der Status dabei auf `genommen`, wird wie in der Oberfläche automatisch 8h Arbeitszeit pro Arbeitstag gebucht |
 | `DELETE /vacation/:id?username=` | Urlaub löschen |
 | `POST /checkin` / `POST /checkout` / `POST /worktime` | Arbeitszeiterfassung, siehe [Companion-Integration](https://github.com/Shadowlord31/ha-shift-planner)-README |
+| `GET /export` | Vollständiger, rein lesender Rohdaten-Export aller Dienstplan-Tabellen, siehe eigener Abschnitt unten |
 
 Hinweis zu `PUT /shift`: bildet — anders als die Teilschicht-fähige Oberfläche — bewusst nur einen
 einzelnen, autoritativen Schicht-Eintrag pro Tag ab (ersetzt einen evtl. vorhandenen Eintrag
 vollständig, inkl. Notiz).
+
+## Export-Format (`GET /api/dp/integration/export`)
+
+Rein lesender Endpunkt (keine Schreibzugriffe, keine Seiteneffekte, keine Migration) — Grundlage für
+eine 1:1-Übernahme der Dienstplan-Daten durch einen externen Dienst (z. B. Jarvis), bevor das Add-on
+irgendwann abgeschaltet wird. Jede Tabelle wird vollständig und ungefiltert als Array mit den **rohen
+Spaltennamen und -werten der SQLite-Datenbank** zurückgegeben — keine Umbenennung, keine Rundung,
+keine Zeitzonenkonvertierung. Datum/Zeit stehen exakt so drin wie in der DB (`DATE` als
+`YYYY-MM-DD`-Text, `TIME` als `HH:MM`- oder `HH:MM:SS`-Text, je nachdem wie der jeweilige Wert
+gespeichert wurde). Jede Zeile enthält ihre unveränderte `id` als Quell-ID für einen idempotenten
+Import. Die autoritative Spaltenliste ist immer `app/db/schema.sql`; unten der Stand zu Version 0.6.0.
+
+Aufbau der Antwort:
+
+```jsonc
+{
+  "version": "0.6.0",              // Add-on-Version (aus package.json)
+  "exportiert_am": "2026-11-04T09:30:00.000Z",
+  "zaehler": { "dp_users": 2, "dp_shift_types": 3, "dp_shifts": 142, "...": "..." },
+  "dp_users": [ /* siehe unten */ ],
+  "dp_shift_types": [ /* ... */ ],
+  "dp_shifts": [ /* ... */ ],
+  "dp_vacations": [ /* ... */ ],
+  "dp_work_times": [ /* ... */ ],
+  "dp_vacation_carryover": [ /* ... */ ],
+  "dp_holidays": [ /* ... */ ],
+  "vergleich": [ /* vom Add-on selbst berechnete Werte, siehe unten */ ]
+}
+```
+
+### Tabellen (Rohdaten)
+
+**`dp_users`** — kein Passwort/Secret enthalten (Login läuft über Ingress, nicht über diese Tabelle).
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `ha_user_id` | TEXT | HA-interne Nutzer-ID zur Ingress-Zuordnung (kein Secret/Token) |
+| `username` | TEXT | HA-Login-Name |
+| `display_name` | TEXT | Anzeigename |
+| `vacation_budget` | INTEGER | Urlaubstage/Jahr (Altfeld, siehe `vacation_base`) |
+| `vacation_base` | INTEGER | Urlaubstage/Jahr (aktuelles Feld) |
+| `bundesland` | TEXT | z. B. `BY` |
+| `work_days` | TEXT(7) | Arbeitstage-Muster Mo–So, z. B. `1111100` |
+| `weekly_hours` | DECIMAL | Soll-Wochenstunden |
+| `created_at` | TIMESTAMP | Anlage-Zeitpunkt |
+
+Beispielzeile (erfundene Daten):
+```json
+{"id":1,"ha_user_id":"a1b2c3","username":"thomas","display_name":"Thomas","vacation_budget":30,"vacation_base":30,"bundesland":"BY","work_days":"1111100","weekly_hours":40,"created_at":"2026-01-02 08:00:00"}
+```
+
+**`dp_shift_types`**
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `user_id` | INTEGER | FK → `dp_users.id` |
+| `name` | TEXT | voller Name der Schichtart |
+| `short_name` | TEXT | Kürzel (im Kalender angezeigt) |
+| `color` | TEXT | Hex-Farbe `#rrggbb` |
+| `default_start` / `default_end` | TIME | Standardzeiten |
+| `counts_as_work` | INTEGER | 0/1, zählt als Arbeitszeit |
+
+Beispiel: `{"id":1,"user_id":1,"name":"Frühschicht","short_name":"FS","color":"#4f8ef7","default_start":"06:00","default_end":"14:00","counts_as_work":1}`
+
+**`dp_shifts`** — alle Blöcke (mehrere pro Tag möglich = Teilschichten, unterschieden über `sort_order`).
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `user_id` | INTEGER | FK → `dp_users.id` |
+| `shift_type_id` | INTEGER | FK → `dp_shift_types.id` (kann `null` sein) |
+| `date` | DATE | `YYYY-MM-DD` |
+| `sort_order` | INTEGER | Reihenfolge der Blöcke desselben Tages, beginnend bei 0 |
+| `actual_start` / `actual_end` | TIME | individuelle Ist-Zeiten (sonst gilt der Default der Schichtart) |
+| `note` | TEXT | Notiz |
+
+Beispiel: `{"id":501,"user_id":1,"shift_type_id":1,"date":"2026-09-10","sort_order":0,"actual_start":"06:00","actual_end":"14:00","note":null}`
+
+**`dp_vacations`**
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `user_id` | INTEGER | FK → `dp_users.id` |
+| `start_date` / `end_date` | DATE | `YYYY-MM-DD` |
+| `status` | TEXT | `geplant` \| `genehmigt` \| `genommen` \| `abgelehnt` |
+| `note` | TEXT | Notiz |
+| `year` | INTEGER | Zuordnungsjahr (= Jahr von `start_date`) |
+
+Beispiel: `{"id":12,"user_id":1,"start_date":"2026-09-14","end_date":"2026-09-18","status":"genommen","note":"Herbsturlaub","year":2026}`
+
+**`dp_work_times`** — alle Blöcke (mehrere pro Tag möglich, unterschieden über `sort_order`).
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `user_id` | INTEGER | FK → `dp_users.id` |
+| `date` | DATE | `YYYY-MM-DD` |
+| `sort_order` | INTEGER | Reihenfolge der Blöcke desselben Tages |
+| `start_time` / `end_time` | TIME | können bei Ganztages-Typen `null` sein |
+| `break_minutes` | INTEGER | Pause in Minuten |
+| `planned_hours` | DECIMAL | aktuell ungenutzt, immer `null` |
+| `actual_hours` | DECIMAL | Ist-Stunden (bei `vacation`/`sick`/`holiday_comp` fest `8`) |
+| `is_vacation` | INTEGER | 0/1, Altfeld (aussagekräftiger: `work_type`) |
+| `work_type` | TEXT | `work` \| `vacation` \| `holiday_comp` \| `sick` |
+| `note` | TEXT | Notiz |
+
+Beispiel: `{"id":900,"user_id":1,"date":"2026-09-10","sort_order":0,"start_time":"06:00","end_time":"14:00","break_minutes":30,"planned_hours":null,"actual_hours":7.5,"is_vacation":0,"work_type":"work","note":null}`
+
+**`dp_vacation_carryover`**
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `user_id` | INTEGER | FK → `dp_users.id` |
+| `year` | INTEGER | Jahr, für das der Übertrag gilt |
+| `carryover` | INTEGER | übertragene Urlaubstage aus dem Vorjahr |
+
+Beispiel: `{"id":3,"user_id":1,"year":2026,"carryover":4}`
+
+**`dp_holidays`** — Feiertage/Ferien, pro Nutzer getrennt gepflegt.
+
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| `id` | INTEGER | Primärschlüssel |
+| `user_id` | INTEGER | FK → `dp_users.id` |
+| `name` | TEXT | Name (z. B. "Sommerferien", "Tag der Arbeit") |
+| `start_date` / `end_date` | DATE | `YYYY-MM-DD` |
+| `type` | TEXT | `ferien` \| `feiertag` |
+| `bundesland` | TEXT | kann `null` sein (bundesweit) |
+| `year` | INTEGER | Jahr |
+
+Beispiel: `{"id":77,"user_id":1,"name":"Sommerferien","start_date":"2026-07-27","end_date":"2026-09-07","type":"ferien","bundesland":"BY","year":2026}`
+
+### `vergleich` (vom Add-on berechnete Werte, nicht roh)
+
+Ein Eintrag pro Nutzer, mit genau den Werten, die die Oberfläche bzw. die übrigen API-Endpunkte
+heute ausgeben (`vacation_remaining` = `GET /api/dp/vacations/remaining/:year`, `stats` = `GET
+/api/dp/stats/:year`, jeweils für das laufende Jahr):
+
+```json
+{
+  "user_id": 1,
+  "username": "thomas",
+  "vacation_remaining": {"budget":30,"base":30,"carryover":4,"used":5,"planned":2,"approved":0,"remaining":27,"work_days":"1111100"},
+  "stats": {"year":2026,"cutoff":"2026-11-04","target_hours":1760,"target_days":220,"actual_hours":1702.5,"diff":-57.5,"sick_days":2,"holiday_comp_days":0,"vacation":{"budget":34,"base":30,"carryover":4,"genommen":5,"geplant":2,"genehmigt":0,"remaining":27},"months":[{"actual":176,"target":0,"vacation":0,"sick":0,"holiday_comp":0,"work_days":22},"..."],"weekly_hours":40,"hpd":8},
+  "shifts_current_month": {"year":2026,"month":11,"count":14}
+}
+```
+
+### Beispielaufruf
+
+```bash
+curl -H "X-API-Token: <api_token>" "http://<host>:<port>/api/dp/integration/export"
+```
 
 ## Migration von der alten Postgres-Version
 

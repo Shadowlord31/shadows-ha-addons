@@ -10,7 +10,12 @@ const {
   bookVacationWorkTimes,
   resolveShiftType,
   replaceShiftForDate,
+  computeYearStats,
 } = require('../lib/shared');
+// package.json wird (anders als config.yaml) mit ins Docker-Image kopiert,
+// daher hier als einzige zur Laufzeit verlaessliche Versionsquelle -- bei
+// jedem Versions-Bump also beide Dateien (config.yaml + package.json) pflegen.
+const ADDON_VERSION = require('../package.json').version;
 
 // Eigener, einfacher Zugang fuer die Home-Assistant-Integration: laeuft in
 // HA Core, also OHNE Ingress und damit ohne X-Remote-User-* Header. Statt
@@ -380,6 +385,57 @@ router.delete('/api/dp/integration/vacation/:id', tokenAuth, (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Urlaub nicht gefunden' });
   db.prepare('DELETE FROM dp_vacations WHERE id=?').run(req.params.id);
   res.json({ ok: true });
+});
+
+// ===== EXPORT (rein lesend) =====
+// Grundlage fuer eine 1:1-Uebernahme durch Jarvis. Liefert alle
+// Dienstplan-Tabellen als Rohdaten (unveraenderte Spaltennamen/-werte, keine
+// Umbenennung/Rundung/Zeitzonenkonvertierung) plus die vom Add-on selbst
+// berechneten Vergleichswerte (computeVacationRemaining/computeYearStats --
+// dieselben Funktionen, die auch /api/dp/vacations/remaining/:year und
+// /api/dp/stats/:year beliefern), damit Jarvis seine eigene Rechenlogik
+// dagegen pruefen kann. Reine SELECTs, kein Schreibzugriff, keine Migration.
+router.get('/api/dp/integration/export', tokenAuth, (req, res) => {
+  try {
+    const tables = {
+      dp_users: db.prepare('SELECT * FROM dp_users ORDER BY id').all(),
+      dp_shift_types: db.prepare('SELECT * FROM dp_shift_types ORDER BY id').all(),
+      dp_shifts: db.prepare('SELECT * FROM dp_shifts ORDER BY id').all(),
+      dp_vacations: db.prepare('SELECT * FROM dp_vacations ORDER BY id').all(),
+      dp_work_times: db.prepare('SELECT * FROM dp_work_times ORDER BY id').all(),
+      dp_vacation_carryover: db.prepare('SELECT * FROM dp_vacation_carryover ORDER BY id').all(),
+      dp_holidays: db.prepare('SELECT * FROM dp_holidays ORDER BY id').all(),
+    };
+
+    const zaehler = {};
+    for (const [name, rows] of Object.entries(tables)) zaehler[name] = rows.length;
+
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+    const vergleich = tables.dp_users.map((u) => {
+      const shiftCount = db.prepare(
+        "SELECT COUNT(*) as n FROM dp_shifts WHERE user_id=? AND strftime('%Y',date)=? AND strftime('%m',date)=?"
+      ).get(u.id, String(curYear), String(curMonth).padStart(2, '0')).n;
+      return {
+        user_id: u.id,
+        username: u.username,
+        vacation_remaining: computeVacationRemaining(db, u.id, curYear),
+        stats: computeYearStats(db, u.id, curYear),
+        shifts_current_month: { year: curYear, month: curMonth, count: shiftCount },
+      };
+    });
+
+    res.json({
+      version: ADDON_VERSION,
+      exportiert_am: now.toISOString(),
+      zaehler,
+      ...tables,
+      vergleich,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;
