@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Fix: Entitaeten-Editor bei Geraeten ohne oder mit leerer Auswahlliste (z. B. Licht aus ohne `effect_list`): keine leeren oder „null“-Eintraege mehr in der Oberflaeche, `null` und leere Werte in einer Auswahlliste werden beim Speichern ignoriert statt mit „ungueltiger Wert“ abgelehnt (andere Nicht-Texte bleiben ein Fehler). Abwaertskompatibel, bestehende Konfigurationen unveraendert
+
 ## 0.4.1
 
 - Oberflaeche: Live-Zaehler (z. B. „0/300“) unter dem Feld „Hinweis fuer Jarvis“ und neben jeder Optionserklaerung (Limit 80); bei Ueberschreitung rot. Das Eingabelimit des Browsers entfaellt, damit die Ueberschreitung sichtbar wird; der Server lehnt zu lange Texte weiterhin ab

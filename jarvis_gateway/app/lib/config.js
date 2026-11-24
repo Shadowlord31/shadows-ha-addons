@@ -38,7 +38,7 @@ function defaultLimits(spec, attrs) {
       const fromAttr = Array.isArray(attrs?.[spec.attr]) ? attrs[spec.attr].filter((x) => spec.values.includes(x)) : null;
       return { allowed: fromAttr && fromAttr.length ? fromAttr : [...spec.values] };
     }
-    const list = Array.isArray(attrs?.[spec.attr]) ? attrs[spec.attr].filter((x) => typeof x === 'string') : [];
+    const list = Array.isArray(attrs?.[spec.attr]) ? attrs[spec.attr].filter((x) => typeof x === 'string' && x) : [];
     return { allowed: list.slice(0, 100) };
   }
   return null;
@@ -107,7 +107,8 @@ function normalizeLimits(spec, input, base, where) {
     const src = input && Array.isArray(input.allowed) ? input.allowed : base.allowed;
     const allowed = [];
     for (const v of src) {
-      if (typeof v !== 'string' || !v || v.length > 100) throw new ValidationError(`${where}: ungültiger Wert`);
+      if (v === null || v === undefined || v === '') continue;
+      if (typeof v !== 'string' || v.length > 100) throw new ValidationError(`${where}: ungültiger Wert`);
       if (spec.values && !spec.values.includes(v)) throw new ValidationError(`${where}: "${v}" ist nicht zulässig`);
       if (!allowed.includes(v)) allowed.push(v);
     }

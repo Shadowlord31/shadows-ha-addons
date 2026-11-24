@@ -552,3 +552,19 @@ test('Oberflaeche: Skript ist syntaktisch gueltig, Zaehler fuer Hinweis (300) un
   assert.ok(js.includes('counter(hint, 300)') && js.includes('counter(t, 80)'));
   assert.ok(!js.includes('null' + 'null'));
 });
+
+test('Licht aus ohne Effektliste oder mit null-Eintraegen: leere Auswahl, Speichern ohne Fehler', async () => {
+  const kahl = (await g.ui.get('/entity/light.kueche')).json;
+  assert.deepEqual(kahl.defaults.actions.turn_on.limits.effect.allowed, []);
+  const put = await g.ui.put('/entity/light.kueche', { access: 'control', actions: { turn_on: { enabled: true, limits: { effect: { allowed: [] } } } } });
+  assert.equal(put.status, 200);
+  assert.deepEqual(put.json.config.actions.turn_on.limits.effect.allowed, []);
+  const mitNull = await g.ui.put('/entity/light.kueche', { access: 'control', actions: { turn_on: { enabled: true, limits: { effect: { allowed: [null, '', 'fire', null] } } } } });
+  assert.equal(mitNull.status, 200);
+  assert.deepEqual(mitNull.json.config.actions.turn_on.limits.effect.allowed, ['fire']);
+  g.mock.setState('light.lampe_a', 'off', { friendly_name: 'Lampe', effect_list: [null, '', 'rainbow'] });
+  await g.waitFor(() => Array.isArray(g.ha.states.get('light.lampe_a').attributes.effect_list));
+  assert.deepEqual((await g.ui.get('/entity/light.lampe_a')).json.defaults.actions.turn_on.limits.effect.allowed, ['rainbow']);
+  const zahl = await g.ui.put('/entity/light.kueche', { access: 'control', actions: { turn_on: { enabled: true, limits: { effect: { allowed: [5] } } } } });
+  assert.equal(zahl.status, 400);
+});

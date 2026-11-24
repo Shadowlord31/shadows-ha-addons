@@ -314,8 +314,8 @@ async function openEdit(id) {
         limEls[pn] = { kind: 'time', from, to };
         lims.append(h('div', { class: 'lim' }, h('span', {}, (ps.label || pn) + ' von'), from, h('span', {}, 'bis'), to));
       } else if (ps.type === 'choice') {
-        const all = [...new Set([...(d.defaults.actions[an]?.limits[pn]?.allowed || []), ...(lim?.allowed || [])])];
-        const set = new Set(lim ? lim.allowed : all);
+        const all = [...new Set([...(d.defaults.actions[an]?.limits[pn]?.allowed || []), ...(lim?.allowed || [])])].filter((v) => typeof v === 'string' && v);
+        const set = new Set(lim && Array.isArray(lim.allowed) ? lim.allowed : all);
         const oh = ac.option_hints?.[pn] || {};
         const cbs = all.map((v) => { const c = h('input', { type: 'checkbox' }); c.checked = set.has(v); const t = h('input', { type: 'text', placeholder: 'Erklärung für Jarvis (optional)', value: oh[v] || '' }); return [v, c, t]; });
         limEls[pn] = { kind: 'choice', cbs };
